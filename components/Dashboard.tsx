@@ -1,40 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { PortfolioStock, StockQuote } from "@/lib/types";
-import { getPortfolio } from "@/lib/storage";
 import PerformanceChart from "./DynamicChart";
 
-export default function Dashboard() {
-  const [portfolio, setPortfolio] = useState<PortfolioStock[]>([]);
-  const [quotes, setQuotes] = useState<Record<string, StockQuote | { error: string }>>({});
-  const [loading, setLoading] = useState(true);
+interface DashboardProps {
+  stocks: PortfolioStock[];
+  quotes: Record<string, StockQuote | { error: string }>;
+  loading: boolean;
+  quotesLoading: boolean;
+}
 
-  useEffect(() => {
-    const stocks = getPortfolio();
-    setPortfolio(stocks);
-
-    if (stocks.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const symbols = Array.from(new Set(stocks.map((s) => s.symbol)));
-    fetch(`/api/quote?symbol=${symbols.join(",")}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setQuotes(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const totalInvested = portfolio.reduce(
+export default function Dashboard({
+  stocks,
+  quotes,
+  loading,
+  quotesLoading,
+}: DashboardProps) {
+  const totalInvested = stocks.reduce(
     (sum, s) => sum + s.shares * s.purchasePrice,
     0
   );
 
-  const totalCurrentValue = portfolio.reduce((sum, s) => {
+  const totalCurrentValue = stocks.reduce((sum, s) => {
     const quote = quotes[s.symbol];
     if (!quote || "error" in quote) return sum;
     return sum + s.shares * quote.currentPrice;
@@ -44,18 +31,28 @@ export default function Dashboard() {
   const totalGainPercent =
     totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0;
 
-  const topGainers = portfolio
+  const topGainers = stocks
     .map((s) => {
-      const quote = quotes[s.symbol] as StockQuote | undefined;
-      if (!quote?.currentPrice) return null;
+      const quote = quotes[s.symbol];
+      if (!quote || "error" in quote) return null;
+      const q = quote as StockQuote;
+      if (!q.currentPrice) return null;
       const gain =
-        ((quote.currentPrice - s.purchasePrice) / s.purchasePrice) * 100;
-      return { ...s, gain, currentPrice: quote.currentPrice };
+        ((q.currentPrice - s.purchasePrice) / s.purchasePrice) * 100;
+      return { ...s, gain, currentPrice: q.currentPrice };
     })
     .filter(Boolean)
     .sort((a, b) => (b?.gain ?? 0) - (a?.gain ?? 0));
 
-  if (portfolio.length === 0) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (stocks.length === 0) {
     return (
       <div className="text-center py-16">
         <div className="text-6xl mb-4">📊</div>
@@ -88,7 +85,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500 mb-1">Total Value Now</p>
           <p className="text-2xl font-bold text-gray-900">
-            {loading ? (
+            {quotesLoading ? (
               <span className="inline-block w-24 h-7 bg-gray-200 rounded animate-pulse" />
             ) : (
               `$${totalCurrentValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -105,7 +102,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500 mb-1">Profit / Loss</p>
-          {loading ? (
+          {quotesLoading ? (
             <span className="inline-block w-24 h-7 bg-gray-200 rounded animate-pulse" />
           ) : (
             <p
@@ -119,7 +116,7 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-2xl border border-gray-200 p-5">
           <p className="text-sm text-gray-500 mb-1">Return</p>
-          {loading ? (
+          {quotesLoading ? (
             <span className="inline-block w-24 h-7 bg-gray-200 rounded animate-pulse" />
           ) : (
             <p
@@ -134,10 +131,10 @@ export default function Dashboard() {
 
       {/* Portfolio Chart */}
       <PerformanceChart
-        symbols={Array.from(new Set(portfolio.map((s) => s.symbol)))}
+        symbols={Array.from(new Set(stocks.map((s) => s.symbol)))}
         title="Portfolio Value Over Time"
         mode="portfolio"
-        portfolioData={portfolio.map((s) => ({
+        portfolioData={stocks.map((s) => ({
           symbol: s.symbol,
           shares: s.shares,
           purchasePrice: s.purchasePrice,
