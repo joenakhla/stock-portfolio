@@ -28,13 +28,14 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await res.json();
+    const allowedTypes = ["EQUITY", "ETF", "CRYPTOCURRENCY", "MUTUALFUND"];
     const quotes = (data.quotes || [])
       .filter(
         (q: { quoteType: string; exchange: string }) =>
-          q.quoteType === "EQUITY" &&
+          allowedTypes.includes(q.quoteType) &&
           !q.exchange?.includes("PNK")
       )
-      .slice(0, 6)
+      .slice(0, 8)
       .map(
         (q: {
           symbol: string;
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
         }) => ({
           symbol: q.symbol,
           name: q.shortname || q.longname || q.symbol,
-          exchange: q.exchDisp || "",
+          exchange: q.exchDisp || q.quoteType,
           type: q.quoteType,
         })
       );
