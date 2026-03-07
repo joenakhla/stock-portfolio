@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { WatchlistStock, StockQuote } from "@/lib/types";
+
+const REFRESH_INTERVAL = 30_000; // 30 seconds
 
 interface DbWatchlistRow {
   id: string;
@@ -26,6 +28,8 @@ export function useWatchlist(userId: string | undefined) {
   const [stocks, setStocks] = useState<WatchlistStock[]>([]);
   const [quotes, setQuotes] = useState<Record<string, StockQuote>>({});
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const stocksRef = useRef<WatchlistStock[]>([]);
 
   const fetchStocks = useCallback(async () => {
     if (!userId) return;
@@ -40,31 +44,47 @@ export function useWatchlist(userId: string | undefined) {
     if (!error && data) {
       const mapped = (data as DbWatchlistRow[]).map(mapRow);
       setStocks(mapped);
+      stocksRef.current = mapped;
     }
     setLoading(false);
   }, [userId]);
 
-  const fetchQuotes = useCallback(async (stockList: WatchlistStock[]) => {
-    if (stockList.length === 0) return;
-    const symbols = Array.from(new Set(stockList.map((s) => s.symbol)));
+  const fetchQuotes = useCallback(async (stockList?: WatchlistStock[]) => {
+    const list = stockList || stocksRef.current;
+    if (list.length === 0) return;
+    const symbols = Array.from(new Set(list.map((s) => s.symbol)));
     try {
-      const res = await fetch(`/api/quote?symbol=${symbols.join(",")}`);
+      const res = await fetch(`/api/quote?symbol=${symbols.join(",")}&t=${Date.now()}`);
       const data = await res.json();
       setQuotes(data);
+      setLastUpdated(new Date());
     } catch {
       // Quotes unavailable
     }
   }, []);
 
+  // Initial load
   useEffect(() => {
     fetchStocks();
   }, [fetchStocks]);
 
+  // Fetch quotes when stocks change
   useEffect(() => {
     if (stocks.length > 0) {
       fetchQuotes(stocks);
     }
   }, [stocks, fetchQuotes]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (stocksRef.current.length === 0) return;
+
+    const interval = setInterval(() => {
+      fetchQuotes();
+    }, REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [fetchQuotes, stocks.length]);
 
   async function addStock(stock: { symbol: string; name: string }) {
     if (!userId) return;
@@ -82,20 +102,26 @@ export function useWatchlist(userId: string | undefined) {
 
     if (!error && data) {
       const mapped = mapRow(data as DbWatchlistRow);
-      setStocks((prev) => [mapped, ...prev]);
+      const updated = [mapped, ...stocksRef.current];
+      setStocks(updated);
+      stocksRef.current = updated;
     }
   }
 
   async function removeStock(id: string) {
     await supabase.from("watchlist_stocks").delete().eq("id", id);
-    setStocks((prev) => prev.filter((s) => s.id !== id));
+    const updated = stocksRef.current.filter((s) => s.id !== id);
+    setStocks(updated);
+    stocksRef.current = updated;
   }
 
   return {
     stocks,
     quotes,
     loading,
+    lastUpdated,
     addStock,
     removeStock,
+    refreshQuotes: () => fetchQuotes(),
   };
 }

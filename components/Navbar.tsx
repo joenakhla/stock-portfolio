@@ -1,10 +1,15 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 interface NavbarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   userEmail?: string;
   onSignOut?: () => void;
+  lastUpdated?: Date | null;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 const TABS = [
@@ -38,23 +43,46 @@ const TABS = [
   },
 ];
 
+function TimeAgo({ date }: { date: Date }) {
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    function update() {
+      const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (seconds < 5) setText("just now");
+      else if (seconds < 60) setText(`${seconds}s ago`);
+      else setText(`${Math.floor(seconds / 60)}m ago`);
+    }
+    update();
+    const timer = setInterval(update, 5000);
+    return () => clearInterval(timer);
+  }, [date]);
+
+  return <span>{text}</span>;
+}
+
 export default function Navbar({
   activeTab,
   onTabChange,
   userEmail,
   onSignOut,
+  lastUpdated,
+  onRefresh,
+  isRefreshing,
 }: NavbarProps) {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
+          {/* Logo */}
           <div className="flex items-center gap-2">
             <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
             </svg>
-            <h1 className="text-xl font-bold text-gray-900">My Stock Tracker</h1>
+            <h1 className="text-xl font-bold text-gray-900 hidden sm:block">My Stock Tracker</h1>
           </div>
 
+          {/* Tabs */}
           <nav className="flex gap-1">
             {TABS.map((tab) => (
               <button
@@ -72,19 +100,46 @@ export default function Navbar({
             ))}
           </nav>
 
-          {userEmail && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500 hidden md:inline">
-                {userEmail}
-              </span>
-              <button
-                onClick={onSignOut}
-                className="px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          )}
+          {/* Right side: Live indicator + User */}
+          <div className="flex items-center gap-3">
+            {/* Live update indicator */}
+            {lastUpdated && (
+              <div className="hidden md:flex items-center gap-2">
+                <button
+                  onClick={onRefresh}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
+                  title="Click to refresh prices now"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                  </span>
+                  {isRefreshing ? (
+                    "Updating..."
+                  ) : (
+                    <>
+                      LIVE &middot; <TimeAgo date={lastUpdated} />
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {userEmail && (
+              <>
+                <span className="text-sm text-gray-500 hidden lg:inline">
+                  {userEmail}
+                </span>
+                <button
+                  onClick={onSignOut}
+                  className="px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  Sign Out
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

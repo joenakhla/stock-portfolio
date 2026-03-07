@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { PortfolioStock, StockQuote } from "@/lib/types";
+
+const REFRESH_INTERVAL = 30_000; // 30 seconds
 
 interface DbPortfolioRow {
   id: string;
@@ -31,6 +33,8 @@ export function usePortfolio(userId: string | undefined) {
   const [quotes, setQuotes] = useState<Record<string, StockQuote | { error: string }>>({});
   const [loading, setLoading] = useState(true);
   const [quotesLoading, setQuotesLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const stocksRef = useRef<PortfolioStock[]>([]);
 
   const fetchStocks = useCallback(async () => {
     if (!userId) return;
@@ -45,33 +49,49 @@ export function usePortfolio(userId: string | undefined) {
     if (!error && data) {
       const mapped = (data as DbPortfolioRow[]).map(mapRow);
       setStocks(mapped);
+      stocksRef.current = mapped;
     }
     setLoading(false);
   }, [userId]);
 
-  const fetchQuotes = useCallback(async (stockList: PortfolioStock[]) => {
-    if (stockList.length === 0) return;
+  const fetchQuotes = useCallback(async (stockList?: PortfolioStock[]) => {
+    const list = stockList || stocksRef.current;
+    if (list.length === 0) return;
     setQuotesLoading(true);
-    const symbols = Array.from(new Set(stockList.map((s) => s.symbol)));
+    const symbols = Array.from(new Set(list.map((s) => s.symbol)));
     try {
-      const res = await fetch(`/api/quote?symbol=${symbols.join(",")}`);
+      const res = await fetch(`/api/quote?symbol=${symbols.join(",")}&t=${Date.now()}`);
       const data = await res.json();
       setQuotes(data);
+      setLastUpdated(new Date());
     } catch {
       // Quotes unavailable
     }
     setQuotesLoading(false);
   }, []);
 
+  // Initial load
   useEffect(() => {
     fetchStocks();
   }, [fetchStocks]);
 
+  // Fetch quotes when stocks change
   useEffect(() => {
     if (stocks.length > 0) {
       fetchQuotes(stocks);
     }
   }, [stocks, fetchQuotes]);
+
+  // Auto-refresh quotes every 30 seconds
+  useEffect(() => {
+    if (stocksRef.current.length === 0) return;
+
+    const interval = setInterval(() => {
+      fetchQuotes();
+    }, REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [fetchQuotes, stocks.length]);
 
   async function addStock(stock: {
     symbol: string;
@@ -97,13 +117,17 @@ export function usePortfolio(userId: string | undefined) {
 
     if (!error && data) {
       const mapped = mapRow(data as DbPortfolioRow);
-      setStocks((prev) => [mapped, ...prev]);
+      const updated = [mapped, ...stocksRef.current];
+      setStocks(updated);
+      stocksRef.current = updated;
     }
   }
 
   async function removeStock(id: string) {
     await supabase.from("portfolio_stocks").delete().eq("id", id);
-    setStocks((prev) => prev.filter((s) => s.id !== id));
+    const updated = stocksRef.current.filter((s) => s.id !== id);
+    setStocks(updated);
+    stocksRef.current = updated;
   }
 
   return {
@@ -111,8 +135,9 @@ export function usePortfolio(userId: string | undefined) {
     quotes,
     loading,
     quotesLoading,
+    lastUpdated,
     addStock,
     removeStock,
-    refetchQuotes: () => fetchQuotes(stocks),
+    refreshQuotes: () => fetchQuotes(),
   };
 }

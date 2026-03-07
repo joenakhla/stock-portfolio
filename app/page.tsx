@@ -19,19 +19,32 @@ export default function Home() {
     quotes: portfolioQuotes,
     loading: portfolioLoading,
     quotesLoading,
+    lastUpdated: portfolioLastUpdated,
     addStock: addPortfolioStock,
     removeStock: removePortfolioStock,
+    refreshQuotes: refreshPortfolioQuotes,
   } = usePortfolio(user?.id);
 
   const {
     stocks: watchlistStocks,
     quotes: watchlistQuotes,
     loading: watchlistLoading,
+    lastUpdated: watchlistLastUpdated,
     addStock: addWatchlistStock,
     removeStock: removeWatchlistStock,
+    refreshQuotes: refreshWatchlistQuotes,
   } = useWatchlist(user?.id);
 
-  // Show loading spinner while checking auth
+  // Use the most recent update time from either hook
+  const lastUpdated = portfolioLastUpdated && watchlistLastUpdated
+    ? new Date(Math.max(portfolioLastUpdated.getTime(), watchlistLastUpdated.getTime()))
+    : portfolioLastUpdated || watchlistLastUpdated;
+
+  function handleRefresh() {
+    refreshPortfolioQuotes();
+    refreshWatchlistQuotes();
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -43,7 +56,6 @@ export default function Home() {
     );
   }
 
-  // Show login/signup if not authenticated
   if (!user) {
     return <AuthForm />;
   }
@@ -55,6 +67,9 @@ export default function Home() {
         onTabChange={setActiveTab}
         userEmail={user.email}
         onSignOut={signOut}
+        lastUpdated={lastUpdated}
+        onRefresh={handleRefresh}
+        isRefreshing={quotesLoading}
       />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
@@ -88,7 +103,7 @@ export default function Home() {
       </main>
 
       <footer className="text-center py-6 text-sm text-gray-400 border-t border-gray-200 mt-8">
-        <p>Stock data provided by Yahoo Finance. Prices may be delayed.</p>
+        <p>Stock data from Yahoo Finance. Prices refresh every 30 seconds.</p>
         <p className="mt-1">
           This is not financial advice. Always do your own research before investing.
         </p>
