@@ -9,7 +9,7 @@ import {
   generateId,
 } from "@/lib/storage";
 import AddStockModal from "./AddStockModal";
-import PerformanceChart from "./PerformanceChart";
+import PerformanceChart from "./DynamicChart";
 
 export default function Watchlist() {
   const [watchlist, setWatchlist] = useState<WatchlistStock[]>([]);

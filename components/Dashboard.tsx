@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { PortfolioStock, StockQuote } from "@/lib/types";
 import { getPortfolio } from "@/lib/storage";
-import PerformanceChart from "./PerformanceChart";
+import PerformanceChart from "./DynamicChart";
 
 export default function Dashboard() {
   const [portfolio, setPortfolio] = useState<PortfolioStock[]>([]);
-  const [quotes, setQuotes] = useState<Record<string, StockQuote & { error?: string }>>({});
+  const [quotes, setQuotes] = useState<Record<string, StockQuote | { error: string }>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,8 +36,8 @@ export default function Dashboard() {
 
   const totalCurrentValue = portfolio.reduce((sum, s) => {
     const quote = quotes[s.symbol];
-    if (!quote || quote.error) return sum;
-    return sum + s.shares * (quote as StockQuote).currentPrice;
+    if (!quote || "error" in quote) return sum;
+    return sum + s.shares * quote.currentPrice;
   }, 0);
 
   const totalGain = totalCurrentValue - totalInvested;

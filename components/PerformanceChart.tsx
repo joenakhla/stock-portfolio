@@ -44,11 +44,6 @@ const RANGE_OPTIONS = [
   { label: "2Y", value: "2y" },
 ];
 
-interface ChartDataPoint {
-  date: string;
-  [key: string]: string | number;
-}
-
 export default function PerformanceChart({
   symbols,
   title = "Price History",
@@ -61,15 +56,21 @@ export default function PerformanceChart({
   >({});
   const [loading, setLoading] = useState(false);
 
+  // Stabilize the symbols array so useEffect doesn't re-run on every render
+  const symbolsKey = symbols.join(",");
+
   useEffect(() => {
-    if (symbols.length === 0) return;
+    if (symbolsKey === "") return;
+    const currentSymbols = symbolsKey.split(",");
+
+    let cancelled = false;
 
     async function fetchHistory() {
       setLoading(true);
       const map: Record<string, HistoricalDataPoint[]> = {};
 
       await Promise.all(
-        symbols.map(async (sym) => {
+        currentSymbols.map(async (sym) => {
           try {
             const res = await fetch(
               `/api/history?symbol=${encodeURIComponent(sym)}&range=${range}`
@@ -82,12 +83,18 @@ export default function PerformanceChart({
         })
       );
 
-      setHistoryMap(map);
-      setLoading(false);
+      if (!cancelled) {
+        setHistoryMap(map);
+        setLoading(false);
+      }
     }
 
     fetchHistory();
-  }, [symbols, range]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [symbolsKey, range]);
 
   const chartData = useMemo(() => {
     if (mode === "portfolio" && portfolioData && portfolioData.length > 0) {
@@ -128,7 +135,7 @@ export default function PerformanceChart({
 
     const sortedDates = Array.from(allDates).sort();
     return sortedDates.map((date) => {
-      const entry: ChartDataPoint = { date };
+      const entry: Record<string, string | number> = { date };
       for (const sym of symbols) {
         const history = historyMap[sym] || [];
         const point = history.find((p) => p.date === date);
@@ -136,7 +143,8 @@ export default function PerformanceChart({
       }
       return entry;
     });
-  }, [historyMap, symbols, mode, portfolioData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyMap, symbolsKey, mode]);
 
   if (symbols.length === 0) {
     return (
@@ -188,7 +196,7 @@ export default function PerformanceChart({
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(d) => {
+                  tickFormatter={(d: string) => {
                     const date = new Date(d);
                     return `${date.getMonth() + 1}/${date.getDate()}`;
                   }}
@@ -197,15 +205,15 @@ export default function PerformanceChart({
                 />
                 <YAxis
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v) => `$${v.toLocaleString()}`}
+                  tickFormatter={(v: number) => `$${v.toLocaleString()}`}
                   width={80}
                 />
                 <Tooltip
-                  formatter={(value: number) => [
-                    `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  formatter={(value: string | number | (string | number)[]) => [
+                    `$${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                     "Portfolio Value",
                   ]}
-                  labelFormatter={(label) =>
+                  labelFormatter={(label: string) =>
                     new Date(label).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
@@ -226,7 +234,7 @@ export default function PerformanceChart({
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(d) => {
+                  tickFormatter={(d: string) => {
                     const date = new Date(d);
                     return `${date.getMonth() + 1}/${date.getDate()}`;
                   }}
@@ -235,15 +243,15 @@ export default function PerformanceChart({
                 />
                 <YAxis
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v) => `$${v}`}
+                  tickFormatter={(v: number) => `$${v}`}
                   width={70}
                 />
                 <Tooltip
-                  formatter={(value: number, name: string) => [
-                    `$${value.toFixed(2)}`,
+                  formatter={(value: string | number | (string | number)[], name: string) => [
+                    `$${Number(value).toFixed(2)}`,
                     name,
                   ]}
-                  labelFormatter={(label) =>
+                  labelFormatter={(label: string) =>
                     new Date(label).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
