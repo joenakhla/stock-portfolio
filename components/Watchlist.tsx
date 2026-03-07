@@ -26,7 +26,7 @@ export default function Watchlist() {
       setLoading(false);
       return;
     }
-    const symbols = [...new Set(stocks.map((s) => s.symbol))];
+    const symbols = Array.from(new Set(stocks.map((s) => s.symbol)));
     try {
       const res = await fetch(`/api/quote?symbol=${symbols.join(",")}`);
       const data = await res.json();

@@ -19,7 +19,7 @@ export default function Dashboard() {
       return;
     }
 
-    const symbols = [...new Set(stocks.map((s) => s.symbol))];
+    const symbols = Array.from(new Set(stocks.map((s) => s.symbol)));
     fetch(`/api/quote?symbol=${symbols.join(",")}`)
       .then((res) => res.json())
       .then((data) => {
@@ -134,7 +134,7 @@ export default function Dashboard() {
 
       {/* Portfolio Chart */}
       <PerformanceChart
-        symbols={[...new Set(portfolio.map((s) => s.symbol))]}
+        symbols={Array.from(new Set(portfolio.map((s) => s.symbol)))}
         title="Portfolio Value Over Time"
         mode="portfolio"
         portfolioData={portfolio.map((s) => ({
