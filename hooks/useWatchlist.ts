@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { WatchlistStock, StockQuote } from "@/lib/types";
+import { isMarketOpen } from "@/lib/marketHours";
 
 const REFRESH_INTERVAL = 30_000; // 30 seconds
 
@@ -75,12 +76,14 @@ export function useWatchlist(userId: string | undefined) {
     }
   }, [stocks, fetchQuotes]);
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh every 30s — only when market is open
   useEffect(() => {
     if (stocksRef.current.length === 0) return;
 
     const interval = setInterval(() => {
-      fetchQuotes();
+      if (isMarketOpen()) {
+        fetchQuotes();
+      }
     }, REFRESH_INTERVAL);
 
     return () => clearInterval(interval);

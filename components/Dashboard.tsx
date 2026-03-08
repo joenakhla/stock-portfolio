@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { PortfolioStock, StockQuote } from "@/lib/types";
 import PerformanceChart from "./DynamicChart";
+import StockNews from "./StockNews";
 
 interface DashboardProps {
   stocks: PortfolioStock[];
@@ -16,6 +18,8 @@ export default function Dashboard({
   loading,
   quotesLoading,
 }: DashboardProps) {
+  const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
+
   const totalInvested = stocks.reduce(
     (sum, s) => sum + s.shares * s.purchasePrice,
     0
@@ -105,11 +109,8 @@ export default function Dashboard({
           {quotesLoading ? (
             <span className="inline-block w-24 h-7 bg-gray-200 rounded animate-pulse" />
           ) : (
-            <p
-              className={`text-2xl font-bold ${totalGain >= 0 ? "text-green-600" : "text-red-600"}`}
-            >
-              {totalGain >= 0 ? "+" : ""}$
-              {Math.abs(totalGain).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <p className={`text-2xl font-bold ${totalGain >= 0 ? "text-green-600" : "text-red-600"}`}>
+              {totalGain >= 0 ? "+" : ""}${Math.abs(totalGain).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
           )}
         </div>
@@ -119,11 +120,8 @@ export default function Dashboard({
           {quotesLoading ? (
             <span className="inline-block w-24 h-7 bg-gray-200 rounded animate-pulse" />
           ) : (
-            <p
-              className={`text-2xl font-bold ${totalGainPercent >= 0 ? "text-green-600" : "text-red-600"}`}
-            >
-              {totalGainPercent >= 0 ? "+" : ""}
-              {totalGainPercent.toFixed(2)}%
+            <p className={`text-2xl font-bold ${totalGainPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+              {totalGainPercent >= 0 ? "+" : ""}{totalGainPercent.toFixed(2)}%
             </p>
           )}
         </div>
@@ -142,38 +140,93 @@ export default function Dashboard({
         }))}
       />
 
-      {/* Top Performers */}
+      {/* Stocks list — click to expand for news + chart */}
       {topGainers.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Your Stocks Ranked by Return
-          </h3>
-          <div className="space-y-3">
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="p-5 pb-3">
+            <h3 className="text-lg font-bold text-gray-900">
+              Your Stocks — Click for News &amp; Analysis
+            </h3>
+            <p className="text-sm text-gray-400">
+              Tap any stock to see news that could move its price
+            </p>
+          </div>
+
+          <div className="divide-y divide-gray-100">
             {topGainers.map((stock) =>
               stock ? (
-                <div
-                  key={stock.id}
-                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
-                >
-                  <div>
-                    <span className="font-semibold text-gray-900">
-                      {stock.symbol}
-                    </span>
-                    <span className="ml-2 text-sm text-gray-500">
-                      {stock.name}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gray-900">
-                      ${stock.currentPrice.toFixed(2)}
-                    </p>
-                    <p
-                      className={`text-sm font-medium ${stock.gain >= 0 ? "text-green-600" : "text-red-600"}`}
-                    >
-                      {stock.gain >= 0 ? "+" : ""}
-                      {stock.gain.toFixed(2)}%
-                    </p>
-                  </div>
+                <div key={stock.id}>
+                  {/* Stock row */}
+                  <button
+                    onClick={() =>
+                      setExpandedSymbol(
+                        expandedSymbol === stock.symbol ? null : stock.symbol
+                      )
+                    }
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                          stock.gain >= 0 ? "bg-green-500" : "bg-red-500"
+                        }`}
+                      >
+                        {stock.gain >= 0 ? "+" : "-"}
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-900">
+                          {stock.symbol}
+                        </span>
+                        <p className="text-sm text-gray-500">{stock.name}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900">
+                          ${stock.currentPrice.toFixed(2)}
+                        </p>
+                        <p
+                          className={`text-sm font-medium ${stock.gain >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {stock.gain >= 0 ? "+" : ""}
+                          {stock.gain.toFixed(2)}%
+                        </p>
+                      </div>
+                      <svg
+                        className={`w-5 h-5 text-gray-400 transition-transform ${
+                          expandedSymbol === stock.symbol ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </div>
+                  </button>
+
+                  {/* Expanded section: chart + news */}
+                  {expandedSymbol === stock.symbol && (
+                    <div className="px-5 pb-5 bg-gray-50 border-t border-gray-100">
+                      <div className="pt-4 space-y-4">
+                        <PerformanceChart
+                          symbols={[stock.symbol]}
+                          title={`${stock.symbol} Price History`}
+                        />
+                        <div>
+                          <h4 className="text-base font-bold text-gray-900 mb-3">
+                            Latest News for {stock.symbol}
+                          </h4>
+                          <StockNews symbol={stock.symbol} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : null
             )}

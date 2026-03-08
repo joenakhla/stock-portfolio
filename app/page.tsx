@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import Dashboard from "@/components/Dashboard";
 import Portfolio from "@/components/Portfolio";
 import Watchlist from "@/components/Watchlist";
+import Trending from "@/components/Trending";
 
 export default function Home() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -43,6 +44,11 @@ export default function Home() {
   function handleRefresh() {
     refreshPortfolioQuotes();
     refreshWatchlistQuotes();
+  }
+
+  // Add trending stock to watchlist directly
+  function handleAddTrendingToWatchlist(stock: { symbol: string; name: string }) {
+    addWatchlistStock({ symbol: stock.symbol, name: stock.name });
   }
 
   if (authLoading) {
@@ -100,10 +106,13 @@ export default function Home() {
             onRemove={removeWatchlistStock}
           />
         )}
+        {activeTab === "trending" && (
+          <Trending onAddToWatchlist={handleAddTrendingToWatchlist} />
+        )}
       </main>
 
       <footer className="text-center py-6 text-sm text-gray-400 border-t border-gray-200 mt-8">
-        <p>Stock data from Yahoo Finance. Prices refresh every 30 seconds.</p>
+        <p>Stock data from Yahoo Finance. Prices refresh every 30 seconds during market hours.</p>
         <p className="mt-1">
           This is not financial advice. Always do your own research before investing.
         </p>
