@@ -148,9 +148,9 @@ export default function PerformanceChart({
 
   if (symbols.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">{title}</h3>
-        <div className="h-64 flex items-center justify-center text-gray-400">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6">
+        <h3 className="text-base md:text-lg font-bold text-gray-900 mb-4">{title}</h3>
+        <div className="h-48 md:h-64 flex items-center justify-center text-gray-400">
           Add stocks to see their price history chart
         </div>
       </div>
@@ -158,10 +158,10 @@ export default function PerformanceChart({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-        <div className="flex gap-1">
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6">
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <h3 className="text-base md:text-lg font-bold text-gray-900 truncate">{title}</h3>
+        <div className="flex flex-wrap gap-1">
           {RANGE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
@@ -179,11 +179,11 @@ export default function PerformanceChart({
       </div>
 
       {loading ? (
-        <div className="h-64 flex items-center justify-center">
+        <div className="h-48 md:h-64 flex items-center justify-center">
           <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="h-72">
+        <div className="h-48 md:h-72">
           <ResponsiveContainer width="100%" height="100%">
             {mode === "portfolio" ? (
               <AreaChart data={chartData}>

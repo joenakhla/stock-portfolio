@@ -122,7 +122,7 @@ export default function Trending({ onAddToWatchlist }: TrendingProps) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
           <span>🔥</span> Trending Stocks
         </h2>
         <p className="text-sm text-gray-500 mt-1">
@@ -168,7 +168,7 @@ export default function Trending({ onAddToWatchlist }: TrendingProps) {
                 <div className="flex items-center gap-4">
                   {/* Momentum Badge */}
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold ${
+                    className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-base md:text-lg font-bold ${
                       stock.momentumScore >= 30
                         ? "bg-orange-100"
                         : stock.momentumScore >= 15
@@ -188,8 +188,8 @@ export default function Trending({ onAddToWatchlist }: TrendingProps) {
                   </div>
 
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 text-lg">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-gray-900 text-base md:text-lg">
                         {stock.symbol}
                       </span>
                       <span
@@ -202,14 +202,14 @@ export default function Trending({ onAddToWatchlist }: TrendingProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3 md:gap-6">
                   {/* Price + Day Change */}
                   <div className="text-right">
-                    <p className="font-bold text-gray-900 text-lg">
+                    <p className="font-bold text-gray-900 text-base md:text-lg">
                       ${stock.currentPrice.toFixed(2)}
                     </p>
                     <p
-                      className={`text-sm font-medium ${
+                      className={`text-xs md:text-sm font-medium ${
                         stock.dayChange >= 0
                           ? "text-green-600"
                           : "text-red-600"

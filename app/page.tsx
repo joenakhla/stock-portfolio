@@ -126,7 +126,7 @@ export default function Home() {
         isRefreshing={quotesLoading}
       />
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-6xl mx-auto px-3 md:px-4 py-4 md:py-6 pb-24 md:pb-6">
         {activeTab === "dashboard" && (
           <Dashboard
             stocks={portfolioStocks}
@@ -160,7 +160,7 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="text-center py-6 text-sm text-gray-400 border-t border-gray-200 mt-8">
+      <footer className="text-center py-6 text-sm text-gray-400 border-t border-gray-200 mt-8 mb-20 md:mb-0">
         <p>
           Stock data from Yahoo Finance &amp; Finnhub. Prices refresh every 30
           seconds during market hours.

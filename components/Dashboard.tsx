@@ -167,7 +167,7 @@ export default function Dashboard({
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                        className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm ${
                           stock.gain >= 0 ? "bg-green-500" : "bg-red-500"
                         }`}
                       >
@@ -180,20 +180,20 @@ export default function Dashboard({
                         <p className="text-sm text-gray-500">{stock.name}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3 md:gap-6">
                       <div className="text-right">
-                        <p className="font-semibold text-gray-900">
+                        <p className="font-semibold text-gray-900 text-sm md:text-base">
                           ${stock.currentPrice.toFixed(2)}
                         </p>
                         <p
-                          className={`text-sm font-medium ${stock.gain >= 0 ? "text-green-600" : "text-red-600"}`}
+                          className={`text-xs md:text-sm font-medium ${stock.gain >= 0 ? "text-green-600" : "text-red-600"}`}
                         >
                           {stock.gain >= 0 ? "+" : ""}
                           {stock.gain.toFixed(2)}%
                         </p>
                       </div>
                       <svg
-                        className={`w-5 h-5 text-gray-400 transition-transform ${
+                        className={`w-4 h-4 md:w-5 md:h-5 text-gray-400 transition-transform ${
                           expandedSymbol === stock.symbol ? "rotate-180" : ""
                         }`}
                         fill="none"
