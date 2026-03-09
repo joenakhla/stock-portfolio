@@ -8,6 +8,8 @@ interface NewsArticle {
   link: string;
   publishedAt: string | null;
   sentiment: "positive" | "negative" | "neutral";
+  source?: string;
+  sourceLabel?: string;
 }
 
 interface NewsData {
@@ -21,6 +23,23 @@ interface NewsData {
     neutral: number;
     overallSentiment: string;
   };
+}
+
+function sourceBadgeColor(source: string): string {
+  switch (source) {
+    case "finnhub":
+      return "bg-blue-100 text-blue-700";
+    case "marketwatch":
+      return "bg-emerald-100 text-emerald-700";
+    case "cnbc":
+      return "bg-yellow-100 text-yellow-800";
+    case "reuters":
+      return "bg-orange-100 text-orange-700";
+    case "yahoo":
+      return "bg-purple-100 text-purple-700";
+    default:
+      return "bg-gray-100 text-gray-600";
+  }
 }
 
 export default function StockNews({ symbol }: { symbol: string }) {
@@ -71,6 +90,35 @@ export default function StockNews({ symbol }: { symbol: string }) {
     return `${days}d ago`;
   }
 
+  function renderArticle(article: NewsArticle, i: number, bgClass: string) {
+    return (
+      <a
+        key={i}
+        href={article.link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`block p-3 ${bgClass} rounded-lg hover:opacity-80 transition-opacity`}
+      >
+        <p className="text-sm font-medium text-gray-900">{article.title}</p>
+        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+          {article.source && article.sourceLabel && (
+            <span
+              className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${sourceBadgeColor(
+                article.source
+              )}`}
+            >
+              {article.sourceLabel}
+            </span>
+          )}
+          <span className="text-xs text-gray-500">
+            {article.publisher}
+            {article.publishedAt && ` · ${timeAgo(article.publishedAt)}`}
+          </span>
+        </div>
+      </a>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Sentiment summary bar */}
@@ -115,29 +163,31 @@ export default function StockNews({ symbol }: { symbol: string }) {
       {news.positive.length > 0 && (
         <div>
           <h5 className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 10l7-7m0 0l7 7m-7-7v18"
+              />
             </svg>
             Good News (may push price up)
           </h5>
           <div className="space-y-2">
-            {news.positive.slice(0, 5).map((article, i) => (
-              <a
-                key={i}
-                href={article.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-3 bg-green-50 border border-green-100 rounded-lg hover:bg-green-100 transition-colors"
-              >
-                <p className="text-sm font-medium text-gray-900">
-                  {article.title}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {article.publisher}
-                  {article.publishedAt && ` · ${timeAgo(article.publishedAt)}`}
-                </p>
-              </a>
-            ))}
+            {news.positive
+              .slice(0, 5)
+              .map((article, i) =>
+                renderArticle(
+                  article,
+                  i,
+                  "bg-green-50 border border-green-100"
+                )
+              )}
           </div>
         </div>
       )}
@@ -146,29 +196,27 @@ export default function StockNews({ symbol }: { symbol: string }) {
       {news.negative.length > 0 && (
         <div>
           <h5 className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-1">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 14l-7 7m0 0l-7-7m7 7V3"
+              />
             </svg>
             Concerning News (may push price down)
           </h5>
           <div className="space-y-2">
-            {news.negative.slice(0, 5).map((article, i) => (
-              <a
-                key={i}
-                href={article.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-3 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors"
-              >
-                <p className="text-sm font-medium text-gray-900">
-                  {article.title}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {article.publisher}
-                  {article.publishedAt && ` · ${timeAgo(article.publishedAt)}`}
-                </p>
-              </a>
-            ))}
+            {news.negative
+              .slice(0, 5)
+              .map((article, i) =>
+                renderArticle(article, i, "bg-red-50 border border-red-100")
+              )}
           </div>
         </div>
       )}
@@ -177,26 +225,19 @@ export default function StockNews({ symbol }: { symbol: string }) {
       {news.neutral.length > 0 && (
         <details className="group">
           <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
-            Show {news.neutral.length} neutral article{news.neutral.length > 1 ? "s" : ""}
+            Show {news.neutral.length} neutral article
+            {news.neutral.length > 1 ? "s" : ""}
           </summary>
           <div className="space-y-2 mt-2">
-            {news.neutral.slice(0, 5).map((article, i) => (
-              <a
-                key={i}
-                href={article.link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block p-3 bg-gray-50 border border-gray-100 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <p className="text-sm font-medium text-gray-900">
-                  {article.title}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {article.publisher}
-                  {article.publishedAt && ` · ${timeAgo(article.publishedAt)}`}
-                </p>
-              </a>
-            ))}
+            {news.neutral
+              .slice(0, 5)
+              .map((article, i) =>
+                renderArticle(
+                  article,
+                  i,
+                  "bg-gray-50 border border-gray-100"
+                )
+              )}
           </div>
         </details>
       )}

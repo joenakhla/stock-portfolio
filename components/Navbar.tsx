@@ -6,7 +6,7 @@ import { getMarketStatus } from "@/lib/marketHours";
 interface NavbarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
-  userEmail?: string;
+  userName?: string;
   onSignOut?: () => void;
   lastUpdated?: Date | null;
   onRefresh?: () => void;
@@ -39,6 +39,15 @@ const TABS = [
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+      </svg>
+    ),
+  },
+  {
+    id: "news",
+    label: "News",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
       </svg>
     ),
   },
@@ -77,7 +86,7 @@ function MarketStatusBadge() {
   useEffect(() => {
     const timer = setInterval(() => {
       setStatus(getMarketStatus());
-    }, 30000); // update every 30s
+    }, 30000);
     return () => clearInterval(timer);
   }, []);
 
@@ -109,7 +118,7 @@ function MarketStatusBadge() {
 export default function Navbar({
   activeTab,
   onTabChange,
-  userEmail,
+  userName,
   onSignOut,
   lastUpdated,
   onRefresh,
@@ -128,33 +137,35 @@ export default function Navbar({
           </div>
 
           {/* Tabs */}
-          <nav className="flex gap-1">
+          <nav className="flex gap-0.5">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? tab.id === "trending"
                       ? "bg-orange-50 text-orange-700"
-                      : "bg-blue-50 text-blue-700"
+                      : tab.id === "news"
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "bg-blue-50 text-blue-700"
                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
                 {tab.icon}
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="hidden md:inline">{tab.label}</span>
               </button>
             ))}
           </nav>
 
           {/* Right side: Market Status + Live indicator + User */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Market Status */}
             <MarketStatusBadge />
 
             {/* Live update indicator */}
             {lastUpdated && (
-              <div className="hidden md:flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-2">
                 <button
                   onClick={onRefresh}
                   disabled={isRefreshing}
@@ -178,10 +189,10 @@ export default function Navbar({
               </div>
             )}
 
-            {userEmail && (
+            {userName && (
               <>
-                <span className="text-sm text-gray-500 hidden lg:inline">
-                  {userEmail}
+                <span className="text-sm font-medium text-gray-700 hidden lg:inline">
+                  {userName}
                 </span>
                 <button
                   onClick={onSignOut}

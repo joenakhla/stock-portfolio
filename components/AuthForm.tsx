@@ -1,15 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function AuthForm() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [signupAllowed, setSignupAllowed] = useState<boolean | null>(null);
+  const [checkingSignup, setCheckingSignup] = useState(false);
+
+  // Check if signup is allowed when switching to signup mode
+  useEffect(() => {
+    if (mode === "signup") {
+      setCheckingSignup(true);
+      fetch("/api/auth/check-signup")
+        .then((res) => res.json())
+        .then((data) => {
+          setSignupAllowed(data.allowed);
+          if (!data.allowed) {
+            setError(
+              "This app is limited to 2 users. No more accounts can be created."
+            );
+          }
+        })
+        .catch(() => {
+          setSignupAllowed(true); // fail-open on network error
+        })
+        .finally(() => setCheckingSignup(false));
+    } else {
+      setSignupAllowed(null);
+      setError("");
+    }
+  }, [mode]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,9 +45,27 @@ export default function AuthForm() {
     setLoading(true);
 
     if (mode === "signup") {
+      // Double-check user limit before signup
+      try {
+        const checkRes = await fetch("/api/auth/check-signup");
+        const checkData = await checkRes.json();
+        if (!checkData.allowed) {
+          setError(
+            "Sorry, this app is limited to 2 users. No new accounts can be created."
+          );
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // If check fails, proceed anyway (fail-open)
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { display_name: displayName.trim() },
+        },
       });
       if (error) {
         setError(error.message);
@@ -30,6 +75,7 @@ export default function AuthForm() {
         );
         setMode("signin");
         setPassword("");
+        setDisplayName("");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -43,6 +89,9 @@ export default function AuthForm() {
 
     setLoading(false);
   }
+
+  const isSignupDisabled =
+    mode === "signup" && (signupAllowed === false || checkingSignup);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -115,7 +164,31 @@ export default function AuthForm() {
             </div>
           )}
 
+          {checkingSignup && mode === "signup" && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-sm flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              Checking availability...
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === "signup" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Your Name
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="What should we call you?"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none text-base"
+                  required
+                  disabled={isSignupDisabled}
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
@@ -127,6 +200,7 @@ export default function AuthForm() {
                 placeholder="you@example.com"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none text-base"
                 required
+                disabled={isSignupDisabled}
               />
             </div>
 
@@ -146,12 +220,13 @@ export default function AuthForm() {
                 minLength={6}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none text-base"
                 required
+                disabled={isSignupDisabled}
               />
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isSignupDisabled}
               className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading
