@@ -73,7 +73,10 @@ function extractTickersFromText(text: string): string[] {
 // --- Finnhub general market news ---
 async function fetchFinnhubNews(): Promise<MarketNewsArticle[]> {
   const apiKey = process.env.FINNHUB_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) {
+    console.log("FINNHUB_API_KEY not set — skipping Finnhub news source");
+    return [];
+  }
 
   try {
     const res = await fetch(
@@ -206,6 +209,10 @@ const RSS_FEEDS = [
     label: "MarketWatch",
   },
   {
+    url: "https://feeds.content.dowjones.io/public/rss/mw_marketpulse",
+    label: "MarketWatch",
+  },
+  {
     url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
     label: "CNBC",
   },
@@ -213,7 +220,81 @@ const RSS_FEEDS = [
     url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=15839069",
     label: "CNBC",
   },
+  {
+    url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664",
+    label: "CNBC",
+  },
+  {
+    url: "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best",
+    label: "Reuters",
+  },
+  {
+    url: "https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT,GOOGL,AMZN,TSLA,NVDA,META&region=US&lang=en-US",
+    label: "Yahoo Finance",
+  },
 ];
+
+// --- Yahoo Finance API news (uses v1 endpoint for top market news) ---
+async function fetchYahooFinanceNews(): Promise<MarketNewsArticle[]> {
+  try {
+    const url = "https://query1.finance.yahoo.com/v1/finance/trending/US?count=5";
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+
+    // Try Yahoo Finance news search
+    const newsUrl =
+      "https://query1.finance.yahoo.com/v1/finance/search?q=stock+market&newsCount=15&quotesCount=0";
+    const newsRes = await fetch(newsUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+      cache: "no-store",
+    });
+    if (!newsRes.ok) return [];
+    const newsData = await newsRes.json();
+    const newsItems = newsData.news || [];
+
+    return newsItems.slice(0, 15).map((item: Record<string, unknown>) => {
+      const title = (item.title as string) || "";
+      const publisher = (item.publisher as string) || "Yahoo Finance";
+      const link = (item.link as string) || "";
+      const publishedAt = item.providerPublishTime
+        ? new Date((item.providerPublishTime as number) * 1000).toISOString()
+        : null;
+
+      const relatedTickers = Array.isArray(item.relatedTickers)
+        ? (item.relatedTickers as string[]).filter(
+            (t) => t.length >= 2 && t.length <= 5
+          )
+        : [];
+      const textTickers = extractTickersFromText(title);
+      const allSymbols = Array.from(
+        new Set([...relatedTickers, ...textTickers])
+      );
+
+      return {
+        title,
+        description: null,
+        publisher,
+        link,
+        publishedAt,
+        sentiment: analyzeSentiment(title),
+        source: publisher.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        sourceLabel: publisher,
+        relatedSymbols: allSymbols,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
 
 export async function GET(request: NextRequest) {
   const sourceFilter = request.nextUrl.searchParams.get("source");
@@ -222,6 +303,7 @@ export async function GET(request: NextRequest) {
     // Fetch all sources in parallel
     const results = await Promise.allSettled([
       fetchFinnhubNews(),
+      fetchYahooFinanceNews(),
       ...RSS_FEEDS.map((feed) => fetchRSSFeed(feed.url, feed.label)),
     ]);
 
@@ -233,8 +315,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Only keep stock-related articles (at least 1 ticker mentioned)
-    allArticles = allArticles.filter((a) => a.relatedSymbols.length > 0);
+    // All articles come from financial news sources so they are stock-related.
+    // Articles with detected tickers get priority — sort them first.
+    allArticles.sort((a, b) => {
+      const aHas = a.relatedSymbols.length > 0 ? 1 : 0;
+      const bHas = b.relatedSymbols.length > 0 ? 1 : 0;
+      return bHas - aHas; // tickers first, then general
+    });
 
     // Apply source filter if provided
     if (sourceFilter && sourceFilter !== "all") {
