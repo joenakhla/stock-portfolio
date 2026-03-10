@@ -32,6 +32,7 @@ export default function Home() {
     quotesLoading,
     lastUpdated: portfolioLastUpdated,
     addStock: addPortfolioStock,
+    updateStock: updatePortfolioStock,
     removeStock: removePortfolioStock,
     refreshQuotes: refreshPortfolioQuotes,
   } = usePortfolio(user?.id);
@@ -142,6 +143,7 @@ export default function Home() {
             loading={portfolioLoading}
             quotesLoading={quotesLoading}
             onAdd={addPortfolioStock}
+            onUpdate={updatePortfolioStock}
             onRemove={removePortfolioStock}
           />
         )}

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PortfolioStock, StockQuote } from "@/lib/types";
 import AddStockModal from "./AddStockModal";
+import EditStockModal from "./EditStockModal";
 import PerformanceChart from "./DynamicChart";
 
 interface PortfolioProps {
@@ -17,6 +18,10 @@ interface PortfolioProps {
     purchasePrice: number;
     purchaseDate: string;
   }) => Promise<void>;
+  onUpdate: (
+    id: string,
+    updates: { shares: number; purchasePrice: number; purchaseDate: string }
+  ) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
 }
 
@@ -26,10 +31,36 @@ export default function Portfolio({
   loading,
   quotesLoading,
   onAdd,
+  onUpdate,
   onRemove,
 }: PortfolioProps) {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingStock, setEditingStock] = useState<PortfolioStock | null>(null);
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+
+  // Compute lot labels for stocks that appear more than once
+  const lotLabels = useMemo(() => {
+    const symbolCounts: Record<string, string[]> = {};
+    for (const s of stocks) {
+      if (!symbolCounts[s.symbol]) symbolCounts[s.symbol] = [];
+      symbolCounts[s.symbol].push(s.id);
+    }
+    const labels: Record<string, string | null> = {};
+    for (const [symbol, ids] of Object.entries(symbolCounts)) {
+      if (ids.length <= 1) {
+        labels[ids[0]] = null; // no label needed
+      } else {
+        // Sort by purchase date to assign lot numbers
+        const sorted = ids
+          .map((id) => stocks.find((s) => s.id === id)!)
+          .sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate));
+        sorted.forEach((s, i) => {
+          labels[s.id] = `Lot ${i + 1}`;
+        });
+      }
+    }
+    return labels;
+  }, [stocks]);
 
   function handleAdd(stock: {
     symbol: string;
@@ -98,6 +129,7 @@ export default function Portfolio({
                     <th className="text-left px-5 py-3 text-sm font-semibold text-gray-600">Stock</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Shares</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Buy Price</th>
+                    <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Purchased</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Current Price</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Profit / Loss</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">
@@ -125,11 +157,23 @@ export default function Portfolio({
                         onClick={() => setSelectedStock(selectedStock === stock.symbol ? null : stock.symbol)}
                       >
                         <td className="px-5 py-4">
-                          <span className="font-bold text-gray-900">{stock.symbol}</span>
-                          <p className="text-sm text-gray-500 truncate max-w-[150px]">{stock.name}</p>
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <span className="font-bold text-gray-900">{stock.symbol}</span>
+                              {lotLabels[stock.id] && (
+                                <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-medium">
+                                  {lotLabels[stock.id]}
+                                </span>
+                              )}
+                              <p className="text-sm text-gray-500 truncate max-w-[150px]">{stock.name}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="text-right px-5 py-4 font-medium text-gray-900">{stock.shares}</td>
                         <td className="text-right px-5 py-4 text-gray-700">${stock.purchasePrice.toFixed(2)}</td>
+                        <td className="text-right px-5 py-4 text-sm text-gray-500">
+                          {new Date(stock.purchaseDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </td>
                         <td className="text-right px-5 py-4 font-medium text-gray-900">
                           {quotesLoading ? (
                             <span className="inline-block w-16 h-5 bg-gray-200 rounded animate-pulse" />
@@ -178,15 +222,26 @@ export default function Portfolio({
                           )}
                         </td>
                         <td className="px-5 py-4">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleRemove(stock.id); }}
-                            className="text-gray-400 hover:text-red-500 transition-colors"
-                            title="Remove from portfolio"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingStock(stock); }}
+                              className="text-gray-400 hover:text-blue-500 transition-colors"
+                              title="Edit this entry"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleRemove(stock.id); }}
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                              title="Remove from portfolio"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -220,7 +275,14 @@ export default function Portfolio({
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-bold text-gray-900 text-base">{stock.symbol}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-gray-900 text-base">{stock.symbol}</span>
+                          {lotLabels[stock.id] && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-medium">
+                              {lotLabels[stock.id]}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 truncate max-w-[140px]">{stock.name}</p>
                       </div>
                       <div className="text-right">
@@ -247,7 +309,7 @@ export default function Portfolio({
                     </div>
 
                     {/* Stats grid */}
-                    <div className="grid grid-cols-3 gap-2 mt-3">
+                    <div className="grid grid-cols-4 gap-1.5 mt-3">
                       <div className="bg-gray-50 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-gray-500 uppercase">Shares</p>
                         <p className="text-sm font-semibold text-gray-900">{stock.shares}</p>
@@ -255,6 +317,12 @@ export default function Portfolio({
                       <div className="bg-gray-50 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-gray-500 uppercase">Buy Price</p>
                         <p className="text-sm font-semibold text-gray-900">${stock.purchasePrice.toFixed(2)}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-gray-500 uppercase">Purchased</p>
+                        <p className="text-xs font-semibold text-gray-900">
+                          {new Date(stock.purchaseDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                        </p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-gray-500 uppercase">Total Value</p>
@@ -290,8 +358,17 @@ export default function Portfolio({
                     )}
                   </button>
 
-                  {/* Delete button */}
-                  <div className="border-t border-gray-100 px-3.5 py-2 flex justify-end">
+                  {/* Edit + Delete buttons */}
+                  <div className="border-t border-gray-100 px-3.5 py-2 flex justify-end gap-4">
+                    <button
+                      onClick={() => setEditingStock(stock)}
+                      className="text-xs text-gray-400 hover:text-blue-500 transition-colors flex items-center gap-1"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
                     <button
                       onClick={() => handleRemove(stock.id)}
                       className="text-xs text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1"
@@ -319,6 +396,14 @@ export default function Portfolio({
         onAdd={handleAdd}
         mode="portfolio"
       />
+
+      {editingStock && (
+        <EditStockModal
+          stock={editingStock}
+          onClose={() => setEditingStock(null)}
+          onSave={onUpdate}
+        />
+      )}
     </div>
   );
 }

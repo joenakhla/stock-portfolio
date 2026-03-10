@@ -126,6 +126,32 @@ export function usePortfolio(userId: string | undefined) {
     }
   }
 
+  async function updateStock(
+    id: string,
+    updates: { shares: number; purchasePrice: number; purchaseDate: string }
+  ) {
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from("portfolio_stocks")
+      .update({
+        shares: updates.shares,
+        purchase_price: updates.purchasePrice,
+        purchase_date: updates.purchaseDate,
+      })
+      .eq("id", id);
+
+    if (!error) {
+      const updated = stocksRef.current.map((s) =>
+        s.id === id
+          ? { ...s, shares: updates.shares, purchasePrice: updates.purchasePrice, purchaseDate: updates.purchaseDate }
+          : s
+      );
+      setStocks(updated);
+      stocksRef.current = updated;
+    }
+  }
+
   async function removeStock(id: string) {
     await supabase.from("portfolio_stocks").delete().eq("id", id);
     const updated = stocksRef.current.filter((s) => s.id !== id);
@@ -140,6 +166,7 @@ export function usePortfolio(userId: string | undefined) {
     quotesLoading,
     lastUpdated,
     addStock,
+    updateStock,
     removeStock,
     refreshQuotes: () => fetchQuotes(),
   };
