@@ -21,6 +21,7 @@ interface DbPortfolioRow {
 function mapRow(row: DbPortfolioRow): PortfolioStock {
   return {
     id: row.id,
+    userId: row.user_id,
     symbol: row.symbol,
     name: row.name,
     shares: Number(row.shares),
@@ -41,10 +42,11 @@ export function usePortfolio(userId: string | undefined) {
     if (!userId) return;
     setLoading(true);
 
+    // Fetch ALL users' stocks (shared dashboard view)
+    // My Stocks tab filters client-side by userId
     const { data, error } = await supabase
       .from("portfolio_stocks")
       .select("*")
-      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (!error && data) {

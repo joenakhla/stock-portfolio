@@ -36,10 +36,10 @@ export function useWatchlist(userId: string | undefined) {
     if (!userId) return;
     setLoading(true);
 
+    // Fetch ALL users' watchlist stocks (shared view)
     const { data, error } = await supabase
       .from("watchlist_stocks")
       .select("*")
-      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     if (!error && data) {

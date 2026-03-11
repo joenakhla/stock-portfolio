@@ -1,5 +1,6 @@
 export interface PortfolioStock {
   id: string;
+  userId: string;
   symbol: string;
   name: string;
   shares: number;

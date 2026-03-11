@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -46,6 +46,13 @@ export default function Home() {
     removeStock: removeWatchlistStock,
     refreshQuotes: refreshWatchlistQuotes,
   } = useWatchlist(user?.id);
+
+  // My Stocks tab shows only the current user's stocks
+  // Dashboard, Watchlist, etc. show ALL users' data (shared)
+  const myPortfolioStocks = useMemo(
+    () => portfolioStocks.filter((s) => s.userId === user?.id),
+    [portfolioStocks, user?.id]
+  );
 
   // Auto-create profile from user metadata if profile doesn't exist
   const [autoCreating, setAutoCreating] = useState(false);
@@ -138,7 +145,7 @@ export default function Home() {
         )}
         {activeTab === "portfolio" && (
           <Portfolio
-            stocks={portfolioStocks}
+            stocks={myPortfolioStocks}
             quotes={portfolioQuotes}
             loading={portfolioLoading}
             quotesLoading={quotesLoading}
