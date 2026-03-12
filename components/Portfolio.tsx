@@ -129,6 +129,7 @@ export default function Portfolio({
                     <th className="text-left px-5 py-3 text-sm font-semibold text-gray-600">Stock</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Shares</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Buy Price</th>
+                    <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Amount Paid</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Purchased</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Current Price</th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Profit / Loss</th>
@@ -171,6 +172,9 @@ export default function Portfolio({
                         </td>
                         <td className="text-right px-5 py-4 font-medium text-gray-900">{stock.shares}</td>
                         <td className="text-right px-5 py-4 text-gray-700">${stock.purchasePrice.toFixed(2)}</td>
+                        <td className="text-right px-5 py-4 font-medium text-gray-900">
+                          ${(stock.shares * stock.purchasePrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
                         <td className="text-right px-5 py-4 text-sm text-gray-500">
                           {new Date(stock.purchaseDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                         </td>
@@ -309,7 +313,7 @@ export default function Portfolio({
                     </div>
 
                     {/* Stats grid */}
-                    <div className="grid grid-cols-4 gap-1.5 mt-3">
+                    <div className="grid grid-cols-3 gap-1.5 mt-3">
                       <div className="bg-gray-50 rounded-lg p-2 text-center">
                         <p className="text-[10px] text-gray-500 uppercase">Shares</p>
                         <p className="text-sm font-semibold text-gray-900">{stock.shares}</p>
@@ -322,6 +326,14 @@ export default function Portfolio({
                         <p className="text-[10px] text-gray-500 uppercase">Purchased</p>
                         <p className="text-xs font-semibold text-gray-900">
                           {new Date(stock.purchaseDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 mt-1.5">
+                      <div className="bg-blue-50 rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-blue-600 uppercase font-medium">Amount Paid</p>
+                        <p className="text-sm font-bold text-blue-800">
+                          ${(stock.shares * stock.purchasePrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-2 text-center">

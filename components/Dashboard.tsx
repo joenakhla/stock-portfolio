@@ -43,7 +43,10 @@ export default function Dashboard({
       if (!q.currentPrice) return null;
       const gain =
         ((q.currentPrice - s.purchasePrice) / s.purchasePrice) * 100;
-      return { ...s, gain, currentPrice: q.currentPrice };
+      const amountPaid = s.shares * s.purchasePrice;
+      const currentValue = s.shares * q.currentPrice;
+      const dollarPL = currentValue - amountPaid;
+      return { ...s, gain, currentPrice: q.currentPrice, amountPaid, currentValue, dollarPL };
     })
     .filter(Boolean)
     .sort((a, b) => (b?.gain ?? 0) - (a?.gain ?? 0));
@@ -178,9 +181,25 @@ export default function Dashboard({
                           {stock.symbol}
                         </span>
                         <p className="text-sm text-gray-500">{stock.name}</p>
+                        {/* Mobile-only: dollar P/L */}
+                        <p className={`text-xs font-medium md:hidden ${stock.dollarPL >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          P/L: {stock.dollarPL >= 0 ? "+" : "-"}${Math.abs(stock.dollarPL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 md:gap-6">
+                      {/* Dollar P/L based on amount paid */}
+                      <div className="text-right hidden md:block">
+                        <p className="text-xs text-gray-400">
+                          Paid ${stock.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <p
+                          className={`text-sm font-semibold ${stock.dollarPL >= 0 ? "text-green-600" : "text-red-600"}`}
+                        >
+                          {stock.dollarPL >= 0 ? "+" : "-"}${Math.abs(stock.dollarPL).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      {/* Current price + % change */}
                       <div className="text-right">
                         <p className="font-semibold text-gray-900 text-sm md:text-base">
                           ${stock.currentPrice.toFixed(2)}

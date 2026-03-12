@@ -153,6 +153,16 @@ export default function AddStockModal({
                 />
               </div>
 
+              {/* Live Amount Paid calculation */}
+              {parseFloat(shares) > 0 && parseFloat(price) > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center justify-between">
+                  <span className="text-sm font-medium text-green-800">Amount Paid</span>
+                  <span className="text-lg font-bold text-green-700">
+                    ${(parseFloat(shares) * parseFloat(price)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   When did you buy it?
