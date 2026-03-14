@@ -136,6 +136,9 @@ export default function Portfolio({
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">
                       <span title="Lowest and highest price in the last 52 weeks (1 year)">52W Low / High</span>
                     </th>
+                    <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">
+                      <span title="Next ex-dividend date and distribution frequency">Dividend</span>
+                    </th>
                     <th className="text-right px-5 py-3 text-sm font-semibold text-gray-600">Total Value</th>
                     <th className="px-5 py-3"></th>
                   </tr>
@@ -214,6 +217,25 @@ export default function Portfolio({
                             </div>
                           ) : (
                             <span className="text-gray-400">N/A</span>
+                          )}
+                        </td>
+                        <td className="text-right px-5 py-4 text-sm">
+                          {quotesLoading ? (
+                            <span className="inline-block w-24 h-5 bg-gray-200 rounded animate-pulse" />
+                          ) : q && q.dividendFrequency !== "None" ? (
+                            <div>
+                              <span className="font-medium text-gray-900">
+                                {q.nextExDividendDate
+                                  ? new Date(q.nextExDividendDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                                  : "—"}
+                              </span>
+                              <p className="text-xs text-amber-600 font-medium">{q.dividendFrequency}</p>
+                              {q.dividendYield > 0 && (
+                                <p className="text-xs text-gray-400">{q.dividendYield.toFixed(2)}% yield</p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">None</span>
                           )}
                         </td>
                         <td className="text-right px-5 py-4 font-bold text-gray-900">
@@ -349,6 +371,30 @@ export default function Portfolio({
                         )}
                       </div>
                     </div>
+
+                    {/* Dividend info */}
+                    {q && q.dividendFrequency !== "None" && (
+                      <div className="bg-amber-50 rounded-lg p-2 mt-1.5 flex items-center justify-between">
+                        <div>
+                          <p className="text-[10px] text-amber-700 uppercase font-medium">Next Distribution</p>
+                          <p className="text-xs font-bold text-amber-900">
+                            {q.nextExDividendDate
+                              ? new Date(q.nextExDividendDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                              : "—"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-amber-700 uppercase font-medium">Frequency</p>
+                          <p className="text-xs font-bold text-amber-900">{q.dividendFrequency}</p>
+                        </div>
+                        {q.dividendYield > 0 && (
+                          <div className="text-right">
+                            <p className="text-[10px] text-amber-700 uppercase font-medium">Yield</p>
+                            <p className="text-xs font-bold text-amber-900">{q.dividendYield.toFixed(2)}%</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* 52W Range */}
                     {q?.low52Week && q?.high52Week && (

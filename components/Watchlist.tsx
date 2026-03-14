@@ -208,6 +208,22 @@ export default function Watchlist({
                       )}
                     </div>
 
+                    <div className="text-right">
+                      <p className="text-xs md:text-sm text-gray-500">Dividend</p>
+                      {quote && quote.dividendFrequency !== "None" ? (
+                        <div>
+                          <p className="font-semibold text-xs md:text-sm text-amber-700">
+                            {quote.nextExDividendDate
+                              ? new Date(quote.nextExDividendDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                              : "—"}
+                          </p>
+                          <p className="text-xs text-amber-600">{quote.dividendFrequency}</p>
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 text-xs md:text-sm">None</p>
+                      )}
+                    </div>
+
                     <button
                       onClick={() => runSimulation(stock.symbol)}
                       className={`px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-medium transition-colors ${

@@ -25,6 +25,11 @@ export interface StockQuote {
   high52Week: number;
   low52Week: number;
   currency: string;
+  dividendRate: number;
+  dividendYield: number;
+  dividendFrequency: string;
+  nextExDividendDate: string | null;
+  nextDividendDate: string | null;
 }
 
 export interface HistoricalDataPoint {
