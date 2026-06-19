@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PortfolioStock, StockQuote } from "@/lib/types";
 import PerformanceChart from "./DynamicChart";
 import StockNews from "./StockNews";
+import FibonacciLevels from "./FibonacciLevels";
 
 interface DashboardProps {
   stocks: PortfolioStock[];
@@ -237,6 +238,7 @@ export default function Dashboard({
                           symbols={[stock.symbol]}
                           title={`${stock.symbol} Price History`}
                         />
+                        <FibonacciLevels symbol={stock.symbol} />
                         <div>
                           <h4 className="text-base font-bold text-gray-900 mb-3">
                             Latest News for {stock.symbol}

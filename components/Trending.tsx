@@ -26,9 +26,10 @@ interface TrendingData {
 
 interface TrendingProps {
   onAddToWatchlist?: (stock: { symbol: string; name: string }) => void;
+  selectedMarkets?: string[];
 }
 
-export default function Trending({ onAddToWatchlist }: TrendingProps) {
+export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"] }: TrendingProps) {
   const [data, setData] = useState<TrendingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -39,7 +40,8 @@ export default function Trending({ onAddToWatchlist }: TrendingProps) {
       setLoading(true);
       setError(false);
       try {
-        const res = await fetch(`/api/trending?t=${Date.now()}`);
+        const marketsQ = selectedMarkets.join(",");
+        const res = await fetch(`/api/trending?markets=${marketsQ}&t=${Date.now()}`);
         if (!res.ok) throw new Error("Failed");
         const json = await res.json();
         setData(json);
@@ -49,7 +51,8 @@ export default function Trending({ onAddToWatchlist }: TrendingProps) {
       setLoading(false);
     }
     fetchTrending();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMarkets.join(",")]);
 
   if (loading) {
     return (

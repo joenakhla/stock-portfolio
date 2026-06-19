@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 interface TrendingQuote {
   symbol: string;
@@ -16,6 +16,17 @@ interface QuoteMeta {
   averageDailyVolume10Day?: number;
 }
 
+const US_FALLBACK = [
+  "NVDA", "PLTR", "SMCI", "ARM", "IONQ", "RKLB",
+  "SOFI", "HOOD", "MARA", "RIOT", "AFRM", "UPST",
+  "DKNG", "CRWD", "NET",
+];
+
+const EGX_FALLBACK = [
+  "COMI.CA", "HRHO.CA", "EAST.CA", "SWDY.CA", "TMGH.CA",
+  "EKHO.CA", "EFIH.CA", "ORWE.CA", "MNHD.CA", "FWRY.CA",
+];
+
 async function fetchWithUA(url: string) {
   return fetch(url, {
     headers: {
@@ -26,31 +37,40 @@ async function fetchWithUA(url: string) {
   });
 }
 
-export async function GET() {
+async function fetchTrendingForRegion(region: string, fallback: string[]): Promise<string[]> {
   try {
-    // 1. Get trending tickers
-    const trendingRes = await fetchWithUA(
-      "https://query1.finance.yahoo.com/v1/finance/trending/US?count=20"
+    const res = await fetchWithUA(
+      `https://query1.finance.yahoo.com/v1/finance/trending/${region}?count=20`
     );
-    let trendingSymbols: string[] = [];
-
-    if (trendingRes.ok) {
-      const trendingData = await trendingRes.json();
-      const quotes: TrendingQuote[] =
-        trendingData.finance?.result?.[0]?.quotes || [];
-      trendingSymbols = quotes
+    if (res.ok) {
+      const data = await res.json();
+      const quotes: TrendingQuote[] = data.finance?.result?.[0]?.quotes || [];
+      const symbols = quotes
         .map((q) => q.symbol)
         .filter((s) => !s.includes("=") && !s.includes("^"))
         .slice(0, 15);
+      if (symbols.length > 0) return symbols;
     }
+  } catch {
+    // Fall through to fallback
+  }
+  return fallback;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const marketsParam = request.nextUrl.searchParams.get("markets") || "US";
+    const markets = marketsParam.split(",").map((m) => m.trim());
+
+    const symbolPromises: Promise<string[]>[] = [];
+    if (markets.includes("US")) symbolPromises.push(fetchTrendingForRegion("US", US_FALLBACK));
+    if (markets.includes("EGX")) symbolPromises.push(fetchTrendingForRegion("EG", EGX_FALLBACK));
+
+    const symbolArrays = await Promise.all(symbolPromises);
+    let trendingSymbols = symbolArrays.flat();
 
     if (trendingSymbols.length === 0) {
-      // Fallback: well-known momentum stocks to check
-      trendingSymbols = [
-        "NVDA", "PLTR", "SMCI", "ARM", "IONQ", "RKLB",
-        "SOFI", "HOOD", "MARA", "RIOT", "AFRM", "UPST",
-        "DKNG", "CRWD", "NET",
-      ];
+      trendingSymbols = US_FALLBACK;
     }
 
     // 2. Fetch quote data for each symbol

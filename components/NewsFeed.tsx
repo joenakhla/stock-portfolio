@@ -50,7 +50,7 @@ function sentimentDotColor(sentiment: string): string {
   }
 }
 
-export default function NewsFeed() {
+export default function NewsFeed({ selectedMarkets = ["US"] }: { selectedMarkets?: string[] }) {
   const [data, setData] = useState<NewsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -76,7 +76,8 @@ export default function NewsFeed() {
           activeSource !== "all"
             ? `?source=${activeSource}&t=${Date.now()}`
             : `?t=${Date.now()}`;
-        const res = await fetch(`/api/news/market${params}`);
+        const marketsQ = `&markets=${selectedMarkets.join(",")}`;
+        const res = await fetch(`/api/news/market${params}${marketsQ}`);
         if (!res.ok) throw new Error("Failed");
         const json = await res.json();
         setData(json);
@@ -86,9 +87,9 @@ export default function NewsFeed() {
       setLoading(false);
     }
     fetchNews();
-    // Reset expand when source changes
     setExpandedIndex(null);
-  }, [activeSource]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSource, selectedMarkets.join(",")]);
 
   // Client-side sentiment filter
   const filteredArticles =

@@ -52,3 +52,37 @@ export interface SimulationResult {
   returnPercent: number | null;
   returnDollars: number | null;
 }
+
+export interface FibonacciLevel {
+  percent: number;
+  price: number;
+  label: string;
+}
+
+export interface FibonacciResult {
+  symbol: string;
+  swingHigh: number;
+  swingLow: number;
+  currentPrice: number;
+  levels: FibonacciLevel[];
+  recommendation: "Buy" | "Sell" | "Hold";
+  reasoning: string;
+}
+
+export interface GoldPriceEntry {
+  buy: number;
+  sell: number;
+}
+
+export interface GoldPricesData {
+  spotUsd: number;
+  usdToEgp: number;
+  updatedAt: string;
+  prices: {
+    karat24: GoldPriceEntry;
+    karat21: GoldPriceEntry;
+    karat18: GoldPriceEntry;
+    goldPound: GoldPriceEntry;
+    goldBar: GoldPriceEntry;
+  };
+}

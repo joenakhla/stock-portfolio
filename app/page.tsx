@@ -5,6 +5,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useProfile } from "@/hooks/useProfile";
+import { useMarketSelection } from "@/hooks/useMarketSelection";
 import AuthForm from "@/components/AuthForm";
 import ProfileSetup from "@/components/ProfileSetup";
 import Navbar from "@/components/Navbar";
@@ -13,10 +14,12 @@ import Portfolio from "@/components/Portfolio";
 import Watchlist from "@/components/Watchlist";
 import Trending from "@/components/Trending";
 import NewsFeed from "@/components/NewsFeed";
+import GoldPrices from "@/components/GoldPrices";
 
 export default function Home() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
+  const { selectedMarkets, toggleMarket, isEgyptSelected } = useMarketSelection();
 
   const {
     displayName,
@@ -47,14 +50,18 @@ export default function Home() {
     refreshQuotes: refreshWatchlistQuotes,
   } = useWatchlist(user?.id);
 
-  // My Stocks tab shows only the current user's stocks
-  // Dashboard, Watchlist, etc. show ALL users' data (shared)
   const myPortfolioStocks = useMemo(
     () => portfolioStocks.filter((s) => s.userId === user?.id),
     [portfolioStocks, user?.id]
   );
 
-  // Auto-create profile from user metadata if profile doesn't exist
+  // If Gold tab was active but Egypt gets deselected, switch to dashboard
+  useEffect(() => {
+    if (activeTab === "gold" && !isEgyptSelected) {
+      setActiveTab("dashboard");
+    }
+  }, [activeTab, isEgyptSelected]);
+
   const [autoCreating, setAutoCreating] = useState(false);
   useEffect(() => {
     if (user && !profileLoading && !hasProfile && !autoCreating) {
@@ -66,7 +73,6 @@ export default function Home() {
     }
   }, [user, profileLoading, hasProfile, autoCreating, createProfile]);
 
-  // Use the most recent update time from either hook
   const lastUpdated =
     portfolioLastUpdated && watchlistLastUpdated
       ? new Date(
@@ -82,7 +88,6 @@ export default function Home() {
     refreshWatchlistQuotes();
   }
 
-  // Add trending stock to watchlist directly
   function handleAddTrendingToWatchlist(stock: {
     symbol: string;
     name: string;
@@ -105,7 +110,6 @@ export default function Home() {
     return <AuthForm />;
   }
 
-  // Wait for profile check to finish
   if (profileLoading || autoCreating) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -117,7 +121,6 @@ export default function Home() {
     );
   }
 
-  // If no profile exists and no metadata to auto-create from, show setup
   if (!hasProfile) {
     return <ProfileSetup onComplete={createProfile} />;
   }
@@ -132,6 +135,8 @@ export default function Home() {
         lastUpdated={lastUpdated}
         onRefresh={handleRefresh}
         isRefreshing={quotesLoading}
+        selectedMarkets={selectedMarkets}
+        onToggleMarket={toggleMarket}
       />
 
       <main className="max-w-6xl mx-auto px-3 md:px-4 py-4 md:py-6 pb-24 md:pb-6">
@@ -163,10 +168,14 @@ export default function Home() {
             onRemove={removeWatchlistStock}
           />
         )}
-        {activeTab === "news" && <NewsFeed />}
+        {activeTab === "news" && <NewsFeed selectedMarkets={selectedMarkets} />}
         {activeTab === "trending" && (
-          <Trending onAddToWatchlist={handleAddTrendingToWatchlist} />
+          <Trending
+            onAddToWatchlist={handleAddTrendingToWatchlist}
+            selectedMarkets={selectedMarkets}
+          />
         )}
+        {activeTab === "gold" && isEgyptSelected && <GoldPrices />}
       </main>
 
       <footer className="text-center py-6 text-sm text-gray-400 border-t border-gray-200 mt-8 mb-20 md:mb-0">
