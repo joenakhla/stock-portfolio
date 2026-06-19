@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: "/api/",
     },
-    sitemap: "https://stock-portfolio-app.vercel.app/sitemap.xml",
+    sitemap: "https://mystocktracker.vercel.app/sitemap.xml",
   };
 }
