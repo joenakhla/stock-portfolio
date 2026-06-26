@@ -5,13 +5,13 @@ import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: {
-    default: "StockTracker - US & Egypt Stock Portfolio, Gold Prices & Fibonacci Analysis",
-    template: "%s | StockTracker",
+    default: "BorsaFibo - US & Egypt Stock Portfolio, Gold Prices & Fibonacci Analysis",
+    template: "%s | BorsaFibo",
   },
   description:
     "Track US and Egyptian (EGX) stock portfolios, live gold prices in EGP, Fibonacci retracement recommendations, trending stocks, and market news. Free multi-market portfolio tracker.",
   keywords: [
-    "stock tracker", "portfolio tracker", "EGX", "Egyptian stock market",
+    "BorsaFibo", "portfolio tracker", "EGX", "Egyptian stock market",
     "gold price Egypt", "gold price EGP", "Fibonacci retracement",
     "stock analysis", "NYSE", "NASDAQ", "Cairo stock exchange",
     "عيار 21", "سعر الذهب", "بورصة مصر", "أسعار الذهب اليوم",
@@ -20,13 +20,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    title: "StockTracker - US & Egypt Stock Portfolio Tracker",
+    title: "BorsaFibo - US & Egypt Stock Portfolio Tracker",
     description: "Track US & Egyptian stocks, live gold prices in EGP, Fibonacci analysis, and market news.",
-    siteName: "StockTracker",
+    siteName: "BorsaFibo",
   },
   twitter: {
     card: "summary_large_image",
-    title: "StockTracker - Multi-Market Portfolio Tracker",
+    title: "BorsaFibo - Multi-Market Portfolio Tracker",
     description: "Track US & Egyptian stocks, gold prices, Fibonacci levels, and market trends.",
   },
   robots: {
@@ -59,7 +59,7 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebApplication",
-              name: "StockTracker",
+              name: "BorsaFibo",
               applicationCategory: "FinanceApplication",
               description:
                 "Multi-market stock portfolio tracker with US and Egyptian stock markets, live gold prices, Fibonacci analysis, and market news.",
