@@ -36,6 +36,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"], w
   const [error, setError] = useState(false);
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const [addedSymbols, setAddedSymbols] = useState<Record<string, boolean>>({});
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     async function fetchTrending() {
@@ -54,7 +55,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"], w
     }
     fetchTrending();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMarkets.join(",")]);
+  }, [selectedMarkets.join(","), retryKey]);
 
   if (loading) {
     return (
@@ -84,7 +85,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"], w
           trading hours or when Yahoo Finance is slow. Try again later.
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => setRetryKey((k) => k + 1)}
           className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
         >
           Retry

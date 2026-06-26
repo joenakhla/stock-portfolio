@@ -9,6 +9,7 @@ interface NavbarProps {
   onTabChange: (tab: string) => void;
   userName?: string;
   onSignOut?: () => void;
+  onRenameUser?: (name: string) => Promise<void>;
   lastUpdated?: Date | null;
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -218,12 +219,29 @@ export default function Navbar({
   onTabChange,
   userName,
   onSignOut,
+  onRenameUser,
   lastUpdated,
   onRefresh,
   isRefreshing,
   selectedMarkets,
   onToggleMarket,
 }: NavbarProps) {
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  function startEdit() {
+    setNameInput(userName || "");
+    setEditingName(true);
+    setTimeout(() => nameInputRef.current?.select(), 0);
+  }
+
+  async function commitEdit() {
+    const trimmed = nameInput.trim();
+    if (!trimmed || trimmed === userName) { setEditingName(false); return; }
+    await onRenameUser?.(trimmed);
+    setEditingName(false);
+  }
   const tabs: TabDef[] = useMemo(() => [
     { id: "dashboard", label: "Dashboard", icon: ICON_DASHBOARD },
     { id: "portfolio", label: "Stocks", icon: ICON_PORTFOLIO },
@@ -311,7 +329,25 @@ export default function Navbar({
 
               {userName && (
                 <>
-                  <span className="text-sm font-medium text-gray-700 hidden lg:inline">{userName}</span>
+                  {editingName ? (
+                    <input
+                      ref={nameInputRef}
+                      value={nameInput}
+                      onChange={(e) => setNameInput(e.target.value)}
+                      onBlur={commitEdit}
+                      onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditingName(false); }}
+                      className="hidden lg:inline w-32 px-2 py-1 text-sm border-2 border-blue-400 rounded-lg focus:outline-none"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={onRenameUser ? startEdit : undefined}
+                      title={onRenameUser ? "Click to rename" : undefined}
+                      className={`text-sm font-medium text-gray-700 hidden lg:inline ${onRenameUser ? "hover:text-blue-600 cursor-pointer" : "cursor-default"}`}
+                    >
+                      {userName}
+                    </button>
+                  )}
                   <button
                     onClick={onSignOut}
                     className="px-2.5 md:px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
