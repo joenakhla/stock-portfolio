@@ -5,6 +5,35 @@ const YF_HEADERS = {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
 };
 
+// In-memory quote cache — survives across requests in the same server process.
+// TTL is slightly shorter than the client's 30s refresh so stale data is rare.
+const CACHE_TTL_MS = 25_000;
+const FETCH_DELAY_MS = 120; // ms between sequential Yahoo requests
+
+interface CacheEntry {
+  data: unknown;
+  cachedAt: number;
+}
+const quoteCache = new Map<string, CacheEntry>();
+
+function getCached(symbol: string): unknown | null {
+  const entry = quoteCache.get(symbol);
+  if (!entry) return null;
+  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+    quoteCache.delete(symbol);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(symbol: string, data: unknown) {
+  quoteCache.set(symbol, { data, cachedAt: Date.now() });
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function determineDividendFrequency(eventCount: number): string {
   if (eventCount === 0) return "None";
   if (eventCount === 1) return "Annual";
@@ -35,7 +64,24 @@ export async function GET(request: NextRequest) {
     const results: Record<string, unknown> = {};
 
     // ── Step 1: Fetch chart data (price + dividend events) ──
+    // Serve from cache where possible; fetch + cache the rest with a small
+    // inter-request delay to avoid hammering Yahoo Finance.
+    const symbolsToFetch: string[] = [];
     for (const sym of symbols) {
+      const cached = getCached(sym);
+      if (cached) {
+        results[sym] = cached;
+      } else {
+        symbolsToFetch.push(sym);
+      }
+    }
+
+    for (let i = 0; i < symbolsToFetch.length; i++) {
+      const sym = symbolsToFetch[i];
+
+      // Small delay between requests (skip before the first one)
+      if (i > 0) await delay(FETCH_DELAY_MS);
+
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=1y&events=div`;
       const res = await fetch(url, {
         headers: YF_HEADERS,
@@ -90,7 +136,7 @@ export async function GET(request: NextRequest) {
           ? (divAnnualSum / currentPrice) * 100
           : 0;
 
-      results[sym] = {
+      const quote = {
         symbol: sym,
         name: meta.shortName || meta.longName || sym,
         currentPrice,
@@ -106,17 +152,21 @@ export async function GET(request: NextRequest) {
         nextExDividendDate: null as string | null,
         nextDividendDate: null as string | null,
       };
+
+      results[sym] = quote;
+      setCache(sym, quote);
     }
 
     // ── Step 2: Batch-fetch upcoming dividend dates via v7 quote ──
+    // Only run for symbols we just fetched (not cache hits — they're already enriched).
     try {
-      const allSymbols = symbols.filter((s) => {
+      const freshSymbols = symbolsToFetch.filter((s) => {
         const r = results[s];
         return r && typeof r === "object" && !("error" in (r as Record<string, unknown>));
       });
 
-      if (allSymbols.length > 0) {
-        const v7Url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${allSymbols.join(",")}`;
+      if (freshSymbols.length > 0) {
+        const v7Url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${freshSymbols.join(",")}`;
         const v7Res = await fetch(v7Url, {
           headers: YF_HEADERS,
           cache: "no-store",
@@ -132,27 +182,26 @@ export async function GET(request: NextRequest) {
 
             const existing = results[sym] as Record<string, unknown>;
 
-            // Use v7 upcoming dates if available
             const exDiv = unixToISO(q.exDividendDate);
             const divDate = unixToISO(q.dividendDate);
             existing.nextExDividendDate = exDiv;
             existing.nextDividendDate = divDate;
 
-            // If v7 has better dividend rate/yield, use those
             if (q.dividendRate && q.dividendRate > 0) {
               existing.dividendRate = Math.round(q.dividendRate * 1000) / 1000;
             }
             if (q.dividendYield && q.dividendYield > 0) {
-              // v7 returns yield as decimal (0.015 = 1.5%), convert to %
               const yieldPct = q.dividendYield > 1 ? q.dividendYield : q.dividendYield * 100;
               existing.dividendYield = Math.round(yieldPct * 100) / 100;
             }
+
+            // Update cache with enriched dividend dates
+            setCache(sym, existing);
           }
         }
       }
     } catch (v7Err) {
       console.error("v7 dividend fetch error (non-critical):", v7Err);
-      // Non-critical — we still have chart-based dividend data
     }
 
     return NextResponse.json(results);
