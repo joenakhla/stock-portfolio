@@ -174,6 +174,7 @@ export default function Home() {
           <Trending
             onAddToWatchlist={handleAddTrendingToWatchlist}
             selectedMarkets={selectedMarkets}
+            watchlistSymbols={watchlistStocks.map((s) => s.symbol)}
           />
         )}
         {activeTab === "gold" && <GoldPrices />}
