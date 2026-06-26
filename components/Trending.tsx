@@ -408,6 +408,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"], w
                     <PerformanceChart
                       symbols={[stock.symbol]}
                       title={`${stock.symbol} Price History`}
+                      defaultRange="6mo"
                     />
                     <div>
                       <h4 className="text-base font-bold text-gray-900 mb-3">

@@ -17,6 +17,7 @@ interface PerformanceChartProps {
   symbols: string[];
   title?: string;
   mode?: "individual" | "portfolio";
+  defaultRange?: string;
   portfolioData?: {
     symbol: string;
     shares: number;
@@ -48,9 +49,10 @@ export default function PerformanceChart({
   symbols,
   title = "Price History",
   mode = "individual",
+  defaultRange = "1y",
   portfolioData,
 }: PerformanceChartProps) {
-  const [range, setRange] = useState("1y");
+  const [range, setRange] = useState(defaultRange);
   const [historyMap, setHistoryMap] = useState<Record<string, HistoricalDataPoint[]>>({});
   const [loading, setLoading] = useState(false);
   const [loadProgress, setLoadProgress] = useState<{ loaded: number; total: number } | null>(null);
