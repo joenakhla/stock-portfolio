@@ -103,7 +103,8 @@ export function useWatchlist(userId: string | undefined) {
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) throw new Error(error.message);
+    if (data) {
       const mapped = mapRow(data as DbWatchlistRow);
       const updated = [mapped, ...stocksRef.current];
       setStocks(updated);
@@ -112,7 +113,8 @@ export function useWatchlist(userId: string | undefined) {
   }
 
   async function removeStock(id: string) {
-    await supabase.from("watchlist_stocks").delete().eq("id", id);
+    const { error } = await supabase.from("watchlist_stocks").delete().eq("id", id);
+    if (error) throw new Error(error.message);
     const updated = stocksRef.current.filter((s) => s.id !== id);
     setStocks(updated);
     stocksRef.current = updated;

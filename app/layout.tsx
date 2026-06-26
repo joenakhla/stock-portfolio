@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
+import { ToastProvider } from "@/lib/toast";
 
 export const metadata: Metadata = {
   title: {
@@ -81,7 +82,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

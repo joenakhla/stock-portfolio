@@ -120,7 +120,8 @@ export function usePortfolio(userId: string | undefined) {
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) throw new Error(error.message);
+    if (data) {
       const mapped = mapRow(data as DbPortfolioRow);
       const updated = [mapped, ...stocksRef.current];
       setStocks(updated);
@@ -143,19 +144,19 @@ export function usePortfolio(userId: string | undefined) {
       })
       .eq("id", id);
 
-    if (!error) {
-      const updated = stocksRef.current.map((s) =>
-        s.id === id
-          ? { ...s, shares: updates.shares, purchasePrice: updates.purchasePrice, purchaseDate: updates.purchaseDate }
-          : s
-      );
-      setStocks(updated);
-      stocksRef.current = updated;
-    }
+    if (error) throw new Error(error.message);
+    const updated = stocksRef.current.map((s) =>
+      s.id === id
+        ? { ...s, shares: updates.shares, purchasePrice: updates.purchasePrice, purchaseDate: updates.purchaseDate }
+        : s
+    );
+    setStocks(updated);
+    stocksRef.current = updated;
   }
 
   async function removeStock(id: string) {
-    await supabase.from("portfolio_stocks").delete().eq("id", id);
+    const { error } = await supabase.from("portfolio_stocks").delete().eq("id", id);
+    if (error) throw new Error(error.message);
     const updated = stocksRef.current.filter((s) => s.id !== id);
     setStocks(updated);
     stocksRef.current = updated;
