@@ -25,6 +25,7 @@ interface NewsResponse {
     overallSentiment: string;
   };
   availableSources: { id: string; label: string }[];
+  egxOnly?: boolean;
 }
 
 function timeAgo(dateStr: string | null): string {
@@ -54,6 +55,7 @@ export default function NewsFeed({ selectedMarkets = ["US"] }: { selectedMarkets
   const [data, setData] = useState<NewsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [activeSource, setActiveSource] = useState("all");
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
 
@@ -89,7 +91,7 @@ export default function NewsFeed({ selectedMarkets = ["US"] }: { selectedMarkets
     fetchNews();
     setExpandedIndex(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSource, selectedMarkets.join(",")]);
+  }, [activeSource, selectedMarkets.join(","), retryKey]);
 
   // Client-side sentiment filter
   const filteredArticles =
@@ -155,7 +157,7 @@ export default function NewsFeed({ selectedMarkets = ["US"] }: { selectedMarkets
           Could not load news. Please try again later.
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => setRetryKey((k) => k + 1)}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
         >
           Retry
@@ -176,6 +178,21 @@ export default function NewsFeed({ selectedMarkets = ["US"] }: { selectedMarkets
           prices.
         </p>
       </div>
+
+      {/* EGX coverage note */}
+      {data.egxOnly && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm">
+          <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-amber-800">
+            English-language coverage for the Egyptian Exchange (EGX) is limited.
+            Showing articles from Egypt Today, Al-Ahram, and Daily News Egypt.
+            For broader EGX news, Arabic-language sources like{" "}
+            <strong>Mubasher (مباشر)</strong> or <strong>Argaam (أرقام)</strong> will have more complete coverage.
+          </p>
+        </div>
+      )}
 
       {/* Sentiment Summary Bar */}
       <div className="bg-white rounded-2xl border border-gray-200 p-3 md:p-4">
@@ -272,10 +289,25 @@ export default function NewsFeed({ selectedMarkets = ["US"] }: { selectedMarkets
       {/* Articles list */}
       {filteredArticles.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
-          <p className="text-lg">No stock-related articles match your filters.</p>
-          <p className="text-sm mt-1">
-            Try changing the source or sentiment filter.
-          </p>
+          {data.egxOnly ? (
+            <>
+              <p className="text-lg">No EGX articles could be loaded right now.</p>
+              <p className="text-sm mt-1">
+                English-language EGX coverage is sparse. Try again later, or visit{" "}
+                <a href="https://www.mubasher.info" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Mubasher</a>{" "}
+                or{" "}
+                <a href="https://www.argaam.com/en" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Argaam</a>{" "}
+                for Arabic-language EGX news.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg">No stock-related articles match your filters.</p>
+              <p className="text-sm mt-1">
+                Try changing the source or sentiment filter.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-2 md:space-y-3">
