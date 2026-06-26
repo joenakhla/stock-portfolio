@@ -27,13 +27,16 @@ interface TrendingData {
 interface TrendingProps {
   onAddToWatchlist?: (stock: { symbol: string; name: string }) => void;
   selectedMarkets?: string[];
+  watchlistSymbols?: string[];
 }
 
-export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"] }: TrendingProps) {
+export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"], watchlistSymbols = [] }: TrendingProps) {
   const [data, setData] = useState<TrendingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
+  const [addedSymbols, setAddedSymbols] = useState<Record<string, boolean>>({});
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     async function fetchTrending() {
@@ -52,7 +55,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"] }:
     }
     fetchTrending();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMarkets.join(",")]);
+  }, [selectedMarkets.join(","), retryKey]);
 
   if (loading) {
     return (
@@ -82,7 +85,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"] }:
           trading hours or when Yahoo Finance is slow. Try again later.
         </p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => setRetryKey((k) => k + 1)}
           className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium"
         >
           Retry
@@ -347,41 +350,57 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"] }:
               </div>
 
               {/* Add to Watchlist button */}
-              {onAddToWatchlist && (
-                <div className="px-5 pb-4">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddToWatchlist({
-                        symbol: stock.symbol,
-                        name: stock.name,
-                      });
-                    }}
-                    className="w-full py-2.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+              {onAddToWatchlist && (() => {
+                const alreadyWatched = watchlistSymbols.includes(stock.symbol);
+                const justAdded = addedSymbols[stock.symbol];
+
+                if (alreadyWatched) {
+                  return (
+                    <div className="px-5 pb-4">
+                      <div className="w-full py-2.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-xl flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Already in Watchlist
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="px-5 pb-4">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddToWatchlist({ symbol: stock.symbol, name: stock.name });
+                        setAddedSymbols((prev) => ({ ...prev, [stock.symbol]: true }));
+                        setTimeout(() => setAddedSymbols((prev) => { const next = { ...prev }; delete next[stock.symbol]; return next; }), 2000);
+                      }}
+                      className={`w-full py-2.5 text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                        justAdded
+                          ? "text-green-700 bg-green-50 border border-green-200"
+                          : "text-blue-700 bg-blue-50 hover:bg-blue-100"
+                      }`}
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                    Add to Watchlist
-                  </button>
-                </div>
-              )}
+                      {justAdded ? (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Added!
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          Add to Watchlist
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* Expanded Section — Chart + News */}
               {isExpanded && (
@@ -390,6 +409,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"] }:
                     <PerformanceChart
                       symbols={[stock.symbol]}
                       title={`${stock.symbol} Price History`}
+                      defaultRange="6mo"
                     />
                     <div>
                       <h4 className="text-base font-bold text-gray-900 mb-3">
