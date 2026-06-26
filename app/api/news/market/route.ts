@@ -203,7 +203,7 @@ async function fetchRSSFeed(
 }
 
 // RSS feed configurations
-const RSS_FEEDS = [
+const RSS_FEEDS_US = [
   {
     url: "https://feeds.content.dowjones.io/public/rss/mw_topstories",
     label: "MarketWatch",
@@ -231,6 +231,22 @@ const RSS_FEEDS = [
   {
     url: "https://feeds.finance.yahoo.com/rss/2.0/headline?s=AAPL,MSFT,GOOGL,AMZN,TSLA,NVDA,META&region=US&lang=en-US",
     label: "Yahoo Finance",
+  },
+];
+
+// English-language Egyptian financial news sources
+const RSS_FEEDS_EGX = [
+  {
+    url: "https://www.egypttoday.com/rss/business",
+    label: "Egypt Today",
+  },
+  {
+    url: "https://english.ahram.org.eg/rss/Economy.aspx",
+    label: "Al-Ahram",
+  },
+  {
+    url: "https://www.dailynewsegypt.com/category/business-economy/feed/",
+    label: "Daily News Egypt",
   },
 ];
 
@@ -298,13 +314,23 @@ async function fetchYahooFinanceNews(): Promise<MarketNewsArticle[]> {
 
 export async function GET(request: NextRequest) {
   const sourceFilter = request.nextUrl.searchParams.get("source");
+  const marketsParam = request.nextUrl.searchParams.get("markets") || "US";
+  const markets = marketsParam.split(",").map((m) => m.trim().toUpperCase());
+  const includesUS = markets.includes("US");
+  const includesEGX = markets.includes("EGX");
+
+  // Select RSS feeds based on requested markets
+  const rssFeeds = [
+    ...(includesUS ? RSS_FEEDS_US : []),
+    ...(includesEGX ? RSS_FEEDS_EGX : []),
+  ];
 
   try {
     // Fetch all sources in parallel
     const results = await Promise.allSettled([
-      fetchFinnhubNews(),
-      fetchYahooFinanceNews(),
-      ...RSS_FEEDS.map((feed) => fetchRSSFeed(feed.url, feed.label)),
+      includesUS ? fetchFinnhubNews() : Promise.resolve([]),
+      includesUS ? fetchYahooFinanceNews() : Promise.resolve([]),
+      ...rssFeeds.map((feed) => fetchRSSFeed(feed.url, feed.label)),
     ]);
 
     // Collect all successful results
@@ -377,6 +403,7 @@ export async function GET(request: NextRequest) {
               : "neutral",
       },
       availableSources,
+      egxOnly: includesEGX && !includesUS,
     });
   } catch (error) {
     console.error("Market news API error:", error);
