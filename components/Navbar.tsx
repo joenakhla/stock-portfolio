@@ -224,21 +224,14 @@ export default function Navbar({
   selectedMarkets,
   onToggleMarket,
 }: NavbarProps) {
-  const isEgyptSelected = selectedMarkets.includes("EGX");
-
-  const tabs: TabDef[] = useMemo(() => {
-    const base: TabDef[] = [
-      { id: "dashboard", label: "Dashboard", icon: ICON_DASHBOARD },
-      { id: "portfolio", label: "Stocks", icon: ICON_PORTFOLIO },
-      { id: "watchlist", label: "Watch", icon: ICON_WATCHLIST },
-      { id: "trending", label: "Trending", icon: ICON_TRENDING },
-      { id: "news", label: "News", icon: ICON_NEWS },
-    ];
-    if (isEgyptSelected) {
-      base.push({ id: "gold", label: "Gold", icon: ICON_GOLD });
-    }
-    return base;
-  }, [isEgyptSelected]);
+  const tabs: TabDef[] = useMemo(() => [
+    { id: "dashboard", label: "Dashboard", icon: ICON_DASHBOARD },
+    { id: "portfolio", label: "Stocks", icon: ICON_PORTFOLIO },
+    { id: "watchlist", label: "Watch", icon: ICON_WATCHLIST },
+    { id: "trending", label: "Trending", icon: ICON_TRENDING },
+    { id: "news", label: "News", icon: ICON_NEWS },
+    { id: "gold", label: "Gold", icon: ICON_GOLD },
+  ], []);
 
   const activeColor = getTabColor(activeTab);
 
