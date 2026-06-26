@@ -15,9 +15,11 @@ import Watchlist from "@/components/Watchlist";
 import Trending from "@/components/Trending";
 import NewsFeed from "@/components/NewsFeed";
 import GoldPrices from "@/components/GoldPrices";
+import { useToast } from "@/lib/toast";
 
 export default function Home() {
   const { user, loading: authLoading, signOut } = useAuth();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
   const { selectedMarkets, toggleMarket, isEgyptSelected } = useMarketSelection();
 
@@ -26,6 +28,7 @@ export default function Home() {
     hasProfile,
     loading: profileLoading,
     createProfile,
+    updateProfile,
   } = useProfile(user?.id);
 
   const {
@@ -55,12 +58,13 @@ export default function Home() {
     [portfolioStocks, user?.id]
   );
 
-  // If Gold tab was active but Egypt gets deselected, switch to dashboard
-  useEffect(() => {
-    if (activeTab === "gold" && !isEgyptSelected) {
-      setActiveTab("dashboard");
+  function handleTabChange(tab: string) {
+    // Auto-enable Egypt market when navigating to Gold tab
+    if (tab === "gold" && !isEgyptSelected) {
+      toggleMarket("EGX");
     }
-  }, [activeTab, isEgyptSelected]);
+    setActiveTab(tab);
+  }
 
   const [autoCreating, setAutoCreating] = useState(false);
   useEffect(() => {
@@ -83,16 +87,75 @@ export default function Home() {
         )
       : portfolioLastUpdated || watchlistLastUpdated;
 
+  async function handleRenameUser(name: string) {
+    try {
+      await updateProfile(name);
+      showToast("Name updated", "success");
+    } catch {
+      showToast("Couldn't update name — please try again", "error");
+    }
+  }
+
   function handleRefresh() {
     refreshPortfolioQuotes();
     refreshWatchlistQuotes();
   }
 
-  function handleAddTrendingToWatchlist(stock: {
+  async function handleAddTrendingToWatchlist(stock: {
     symbol: string;
     name: string;
   }) {
-    addWatchlistStock({ symbol: stock.symbol, name: stock.name });
+    try {
+      await addWatchlistStock({ symbol: stock.symbol, name: stock.name });
+      showToast(`${stock.symbol} added to watchlist`, "success");
+    } catch {
+      showToast(`Couldn't add ${stock.symbol} — please try again`, "error");
+    }
+  }
+
+  async function handleAddPortfolioStock(stock: Parameters<typeof addPortfolioStock>[0]) {
+    try {
+      await addPortfolioStock(stock);
+      showToast(`${stock.symbol} added to portfolio`, "success");
+    } catch {
+      showToast(`Couldn't add ${stock.symbol} — please try again`, "error");
+    }
+  }
+
+  async function handleUpdatePortfolioStock(...args: Parameters<typeof updatePortfolioStock>) {
+    try {
+      await updatePortfolioStock(...args);
+      showToast("Stock updated", "success");
+    } catch {
+      showToast("Update failed — please try again", "error");
+    }
+  }
+
+  async function handleRemovePortfolioStock(id: string) {
+    try {
+      await removePortfolioStock(id);
+      showToast("Removed from portfolio", "success");
+    } catch {
+      showToast("Couldn't remove — please try again", "error");
+    }
+  }
+
+  async function handleAddWatchlistStock(stock: Parameters<typeof addWatchlistStock>[0]) {
+    try {
+      await addWatchlistStock(stock);
+      showToast(`${stock.symbol} added to watchlist`, "success");
+    } catch {
+      showToast(`Couldn't add ${stock.symbol} — please try again`, "error");
+    }
+  }
+
+  async function handleRemoveWatchlistStock(id: string) {
+    try {
+      await removeWatchlistStock(id);
+      showToast("Removed from watchlist", "success");
+    } catch {
+      showToast("Couldn't remove — please try again", "error");
+    }
   }
 
   if (authLoading) {
@@ -129,8 +192,9 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       <Navbar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         userName={displayName || user.email}
+        onRenameUser={handleRenameUser}
         onSignOut={signOut}
         lastUpdated={lastUpdated}
         onRefresh={handleRefresh}
@@ -151,12 +215,13 @@ export default function Home() {
         {activeTab === "portfolio" && (
           <Portfolio
             stocks={myPortfolioStocks}
+            allStocks={portfolioStocks}
             quotes={portfolioQuotes}
             loading={portfolioLoading}
             quotesLoading={quotesLoading}
-            onAdd={addPortfolioStock}
-            onUpdate={updatePortfolioStock}
-            onRemove={removePortfolioStock}
+            onAdd={handleAddPortfolioStock}
+            onUpdate={handleUpdatePortfolioStock}
+            onRemove={handleRemovePortfolioStock}
           />
         )}
         {activeTab === "watchlist" && (
@@ -164,8 +229,8 @@ export default function Home() {
             stocks={watchlistStocks}
             quotes={watchlistQuotes}
             loading={watchlistLoading}
-            onAdd={addWatchlistStock}
-            onRemove={removeWatchlistStock}
+            onAdd={handleAddWatchlistStock}
+            onRemove={handleRemoveWatchlistStock}
           />
         )}
         {activeTab === "news" && <NewsFeed selectedMarkets={selectedMarkets} />}
@@ -173,9 +238,10 @@ export default function Home() {
           <Trending
             onAddToWatchlist={handleAddTrendingToWatchlist}
             selectedMarkets={selectedMarkets}
+            watchlistSymbols={watchlistStocks.map((s) => s.symbol)}
           />
         )}
-        {activeTab === "gold" && isEgyptSelected && <GoldPrices />}
+        {activeTab === "gold" && <GoldPrices />}
       </main>
 
       <footer className="text-center py-6 text-sm text-gray-400 border-t border-gray-200 mt-8 mb-20 md:mb-0">

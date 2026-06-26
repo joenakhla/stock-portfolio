@@ -4,10 +4,12 @@ import { useState, useMemo } from "react";
 import { PortfolioStock, StockQuote } from "@/lib/types";
 import AddStockModal from "./AddStockModal";
 import EditStockModal from "./EditStockModal";
+import ConfirmModal from "./ConfirmModal";
 import PerformanceChart from "./DynamicChart";
 
 interface PortfolioProps {
   stocks: PortfolioStock[];
+  allStocks?: PortfolioStock[];
   quotes: Record<string, StockQuote | { error: string }>;
   loading: boolean;
   quotesLoading: boolean;
@@ -27,6 +29,7 @@ interface PortfolioProps {
 
 export default function Portfolio({
   stocks,
+  allStocks = [],
   quotes,
   loading,
   quotesLoading,
@@ -37,6 +40,14 @@ export default function Portfolio({
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStock, setEditingStock] = useState<PortfolioStock | null>(null);
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [showOthers, setShowOthers] = useState(false);
+
+  const myIds = useMemo(() => new Set(stocks.map((s) => s.id)), [stocks]);
+  const otherStocks = useMemo(
+    () => allStocks.filter((s) => !myIds.has(s.id)),
+    [allStocks, myIds]
+  );
 
   // Compute lot labels for stocks that appear more than once
   const lotLabels = useMemo(() => {
@@ -73,13 +84,7 @@ export default function Portfolio({
   }
 
   function handleRemove(id: string) {
-    if (
-      !window.confirm(
-        "Are you sure you want to remove this stock from your portfolio?"
-      )
-    )
-      return;
-    onRemove(id);
+    setRemovingId(id);
   }
 
   if (loading) {
@@ -448,6 +453,60 @@ export default function Portfolio({
         </>
       )}
 
+      {/* Other members' stocks */}
+      {otherStocks.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <button
+            onClick={() => setShowOthers((v) => !v)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors text-left"
+          >
+            <div>
+              <h3 className="font-semibold text-gray-700 text-sm">Other Members&apos; Stocks</h3>
+              <p className="text-xs text-gray-400">{otherStocks.length} holding{otherStocks.length !== 1 ? "s" : ""} tracked by other members</p>
+            </div>
+            <svg
+              className={`w-5 h-5 text-gray-400 transition-transform ${showOthers ? "rotate-180" : ""}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showOthers && (
+            <div className="border-t border-gray-100 divide-y divide-gray-100">
+              {otherStocks.map((s) => {
+                const q = quotes[s.symbol];
+                const quote = q && !("error" in q) ? (q as StockQuote) : null;
+                const currentValue = quote ? s.shares * quote.currentPrice : null;
+                const gain = quote ? ((quote.currentPrice - s.purchasePrice) / s.purchasePrice) * 100 : null;
+
+                return (
+                  <div key={s.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                    <div>
+                      <span className="font-semibold text-gray-800">{s.symbol}</span>
+                      <span className="text-gray-400 ml-2 text-xs">{s.shares} sh @ ${s.purchasePrice.toFixed(2)}</span>
+                    </div>
+                    <div className="text-right">
+                      {quote ? (
+                        <>
+                          <p className="font-medium text-gray-800">${quote.currentPrice.toFixed(2)}</p>
+                          <p className={`text-xs font-medium ${(gain ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {(gain ?? 0) >= 0 ? "+" : ""}{(gain ?? 0).toFixed(1)}%
+                            {currentValue && <span className="text-gray-400 ml-1">(${currentValue.toFixed(0)})</span>}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-gray-400">—</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <AddStockModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
@@ -462,6 +521,15 @@ export default function Portfolio({
           onSave={onUpdate}
         />
       )}
+
+      <ConfirmModal
+        isOpen={removingId !== null}
+        title="Remove stock"
+        message="This will permanently remove this entry from your portfolio."
+        confirmLabel="Remove"
+        onConfirm={() => { onRemove(removingId!); setRemovingId(null); }}
+        onCancel={() => setRemovingId(null)}
+      />
     </div>
   );
 }
