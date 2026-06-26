@@ -26,6 +26,7 @@ export default function GoldPrices() {
   const [data, setData] = useState<GoldPricesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +49,7 @@ export default function GoldPrices() {
     fetchGold();
     const timer = setInterval(fetchGold, 60000);
     return () => { cancelled = true; clearInterval(timer); };
-  }, []);
+  }, [retryKey]);
 
   if (loading) {
     return (
@@ -68,7 +69,7 @@ export default function GoldPrices() {
         <h2 className="text-xl font-bold text-gray-900 mb-2">Could not load gold prices</h2>
         <p className="text-gray-500 mb-4">Please try again later.</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => setRetryKey((k) => k + 1)}
           className="px-4 py-2 bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-700"
         >
           Retry
