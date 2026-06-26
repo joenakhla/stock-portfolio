@@ -51,10 +51,10 @@ export default function PerformanceChart({
   portfolioData,
 }: PerformanceChartProps) {
   const [range, setRange] = useState("1y");
-  const [historyMap, setHistoryMap] = useState<
-    Record<string, HistoricalDataPoint[]>
-  >({});
+  const [historyMap, setHistoryMap] = useState<Record<string, HistoricalDataPoint[]>>({});
   const [loading, setLoading] = useState(false);
+  const [loadProgress, setLoadProgress] = useState<{ loaded: number; total: number } | null>(null);
+  const [failedSymbols, setFailedSymbols] = useState<string[]>([]);
 
   // Stabilize the symbols array so useEffect doesn't re-run on every render
   const symbolsKey = symbols.join(",");
@@ -67,34 +67,64 @@ export default function PerformanceChart({
 
     async function fetchHistory() {
       setLoading(true);
+      setFailedSymbols([]);
       const map: Record<string, HistoricalDataPoint[]> = {};
+      const failed: string[] = [];
 
-      await Promise.all(
-        currentSymbols.map(async (sym) => {
+      if (mode === "portfolio" && currentSymbols.length > 1) {
+        // Sequential with progress to avoid hammering Yahoo with many stocks
+        setLoadProgress({ loaded: 0, total: currentSymbols.length });
+        for (let i = 0; i < currentSymbols.length; i++) {
+          if (cancelled) return;
+          const sym = currentSymbols[i];
           try {
-            const res = await fetch(
-              `/api/history?symbol=${encodeURIComponent(sym)}&range=${range}`
-            );
+            const res = await fetch(`/api/history?symbol=${encodeURIComponent(sym)}&range=${range}`);
             const data = await res.json();
-            map[sym] = data.history || [];
+            if (data.error) {
+              map[sym] = [];
+              failed.push(sym);
+            } else {
+              map[sym] = data.history || [];
+            }
           } catch {
             map[sym] = [];
+            failed.push(sym);
           }
-        })
-      );
+          if (!cancelled) setLoadProgress({ loaded: i + 1, total: currentSymbols.length });
+        }
+      } else {
+        // Parallel for single stock or small comparisons
+        await Promise.all(
+          currentSymbols.map(async (sym) => {
+            try {
+              const res = await fetch(`/api/history?symbol=${encodeURIComponent(sym)}&range=${range}`);
+              const data = await res.json();
+              if (data.error) {
+                map[sym] = [];
+                failed.push(sym);
+              } else {
+                map[sym] = data.history || [];
+              }
+            } catch {
+              map[sym] = [];
+              failed.push(sym);
+            }
+          })
+        );
+      }
 
       if (!cancelled) {
         setHistoryMap(map);
+        setFailedSymbols(failed);
         setLoading(false);
+        setLoadProgress(null);
       }
     }
 
     fetchHistory();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [symbolsKey, range]);
+    return () => { cancelled = true; };
+  }, [symbolsKey, range, mode]);
 
   const chartData = useMemo(() => {
     if (mode === "portfolio" && portfolioData && portfolioData.length > 0) {
@@ -179,8 +209,13 @@ export default function PerformanceChart({
       </div>
 
       {loading ? (
-        <div className="h-48 md:h-64 flex items-center justify-center">
-          <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-48 md:h-64 flex flex-col items-center justify-center gap-3">
+          <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          {loadProgress && loadProgress.total > 1 && (
+            <p className="text-sm text-gray-400">
+              Loading {loadProgress.loaded} / {loadProgress.total} stocks…
+            </p>
+          )}
         </div>
       ) : (
         <div className="h-48 md:h-72">
@@ -282,13 +317,23 @@ export default function PerformanceChart({
             <div key={sym} className="flex items-center gap-1.5">
               <div
                 className="w-3 h-3 rounded-full"
-                style={{
-                  backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
-                }}
+                style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
               />
               <span className="text-sm text-gray-600 font-medium">{sym}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {failedSymbols.length > 0 && (
+        <div className="mt-3 flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <span>
+            Could not load history for{" "}
+            <strong>{failedSymbols.join(", ")}</strong>. Chart may be incomplete.
+          </span>
         </div>
       )}
     </div>
