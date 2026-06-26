@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { WatchlistStock, StockQuote, SimulationResult } from "@/lib/types";
 import AddStockModal from "./AddStockModal";
+import ConfirmModal from "./ConfirmModal";
 import PerformanceChart from "./DynamicChart";
 
 interface WatchlistProps {
@@ -20,11 +21,17 @@ export default function Watchlist({
   onAdd,
   onRemove,
 }: WatchlistProps) {
-  const [simulations, setSimulations] = useState<
-    Record<string, SimulationResult[]>
-  >({});
+  const [simulations, setSimulations] = useState<Record<string, SimulationResult[]>>({});
+  const [investAmounts, setInvestAmounts] = useState<Record<string, string>>({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedStock, setExpandedStock] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  function getInvestAmount(symbol: string): number {
+    const raw = investAmounts[symbol];
+    const parsed = parseFloat(raw);
+    return raw && !isNaN(parsed) && parsed > 0 ? parsed : 100;
+  }
 
   async function runSimulation(symbol: string) {
     if (simulations[symbol]) {
@@ -236,7 +243,7 @@ export default function Watchlist({
                     </button>
 
                     <button
-                      onClick={() => onRemove(stock.id)}
+                      onClick={() => setRemovingId(stock.id)}
                       className="text-gray-400 hover:text-red-500 transition-colors"
                       title="Remove from watchlist"
                     >
@@ -249,34 +256,59 @@ export default function Watchlist({
 
                 {isExpanded && (
                   <div className="border-t border-gray-100 p-5 bg-purple-50/50">
-                    <h4 className="font-semibold text-gray-900 mb-3">
-                      &quot;What If&quot; — If you had invested $100...
-                    </h4>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                      <h4 className="font-semibold text-gray-900">
+                        &quot;What If&quot; — How much would you have made?
+                      </h4>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm text-gray-500 whitespace-nowrap">If I invested</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">$</span>
+                          <input
+                            type="number"
+                            min="1"
+                            step="any"
+                            value={investAmounts[stock.symbol] ?? "100"}
+                            onChange={(e) =>
+                              setInvestAmounts((prev) => ({ ...prev, [stock.symbol]: e.target.value }))
+                            }
+                            className="w-28 pl-7 pr-3 py-1.5 text-sm font-semibold border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:outline-none bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
                     {sim ? (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {sim.map((result) => (
-                          <div key={result.months} className="bg-white rounded-xl p-4 border border-gray-200">
-                            <p className="text-sm text-gray-500 mb-1">{result.label}</p>
-                            {result.returnPercent !== null ? (
-                              <>
-                                <p className={`text-xl font-bold ${result.returnPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                  {result.returnPercent >= 0 ? "+" : ""}{result.returnPercent.toFixed(1)}%
-                                </p>
-                                <p className="text-sm text-gray-500 mt-1">
-                                  $100 would be{" "}
-                                  <span className="font-medium text-gray-900">
-                                    ${(100 + (result.returnDollars || 0)).toFixed(2)}
-                                  </span>
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  Price was ${result.pastPrice?.toFixed(2)}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="text-sm text-gray-400">Not enough data</p>
-                            )}
-                          </div>
-                        ))}
+                        {sim.map((result) => {
+                          const amount = getInvestAmount(stock.symbol);
+                          const dollarReturn = result.returnPercent !== null
+                            ? (result.returnPercent / 100) * amount
+                            : null;
+                          const finalValue = dollarReturn !== null ? amount + dollarReturn : null;
+                          return (
+                            <div key={result.months} className="bg-white rounded-xl p-4 border border-gray-200">
+                              <p className="text-sm text-gray-500 mb-1">{result.label}</p>
+                              {result.returnPercent !== null && finalValue !== null ? (
+                                <>
+                                  <p className={`text-xl font-bold ${result.returnPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                    {result.returnPercent >= 0 ? "+" : ""}{result.returnPercent.toFixed(1)}%
+                                  </p>
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    would be{" "}
+                                    <span className={`font-semibold ${finalValue >= amount ? "text-green-700" : "text-red-600"}`}>
+                                      ${finalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Price was ${result.pastPrice?.toFixed(2)}
+                                  </p>
+                                </>
+                              ) : (
+                                <p className="text-sm text-gray-400">Not enough data</p>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-gray-500">
@@ -305,6 +337,15 @@ export default function Watchlist({
         onClose={() => setShowAddModal(false)}
         onAdd={handleAdd}
         mode="watchlist"
+      />
+
+      <ConfirmModal
+        isOpen={removingId !== null}
+        title="Remove from watchlist"
+        message="This will remove this stock from your watchlist."
+        confirmLabel="Remove"
+        onConfirm={() => { onRemove(removingId!); setRemovingId(null); }}
+        onCancel={() => setRemovingId(null)}
       />
     </div>
   );
