@@ -86,7 +86,7 @@ export default function AuthForm() {
               />
             </svg>
             <h1 className="text-3xl font-bold text-gray-900">
-              My Stock Tracker
+              BorsaFibo
             </h1>
           </div>
           <p className="text-gray-500">
