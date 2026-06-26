@@ -224,21 +224,14 @@ export default function Navbar({
   selectedMarkets,
   onToggleMarket,
 }: NavbarProps) {
-  const isEgyptSelected = selectedMarkets.includes("EGX");
-
-  const tabs: TabDef[] = useMemo(() => {
-    const base: TabDef[] = [
-      { id: "dashboard", label: "Dashboard", icon: ICON_DASHBOARD },
-      { id: "portfolio", label: "Stocks", icon: ICON_PORTFOLIO },
-      { id: "watchlist", label: "Watch", icon: ICON_WATCHLIST },
-      { id: "trending", label: "Trending", icon: ICON_TRENDING },
-      { id: "news", label: "News", icon: ICON_NEWS },
-    ];
-    if (isEgyptSelected) {
-      base.push({ id: "gold", label: "Gold", icon: ICON_GOLD });
-    }
-    return base;
-  }, [isEgyptSelected]);
+  const tabs: TabDef[] = useMemo(() => [
+    { id: "dashboard", label: "Dashboard", icon: ICON_DASHBOARD },
+    { id: "portfolio", label: "Stocks", icon: ICON_PORTFOLIO },
+    { id: "watchlist", label: "Watch", icon: ICON_WATCHLIST },
+    { id: "trending", label: "Trending", icon: ICON_TRENDING },
+    { id: "news", label: "News", icon: ICON_NEWS },
+    { id: "gold", label: "Gold", icon: ICON_GOLD },
+  ], []);
 
   const activeColor = getTabColor(activeTab);
 
@@ -253,7 +246,7 @@ export default function Navbar({
               <svg className="w-7 h-7 md:w-8 md:h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              <h1 className="text-lg md:text-xl font-bold text-gray-900 hidden sm:block">StockTracker</h1>
+              <h1 className="text-lg md:text-xl font-bold text-gray-900 hidden sm:block">BorsaFibo</h1>
             </div>
 
             {/* Desktop Tabs */}

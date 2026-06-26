@@ -55,12 +55,13 @@ export default function Home() {
     [portfolioStocks, user?.id]
   );
 
-  // If Gold tab was active but Egypt gets deselected, switch to dashboard
-  useEffect(() => {
-    if (activeTab === "gold" && !isEgyptSelected) {
-      setActiveTab("dashboard");
+  function handleTabChange(tab: string) {
+    // Auto-enable Egypt market when navigating to Gold tab
+    if (tab === "gold" && !isEgyptSelected) {
+      toggleMarket("EGX");
     }
-  }, [activeTab, isEgyptSelected]);
+    setActiveTab(tab);
+  }
 
   const [autoCreating, setAutoCreating] = useState(false);
   useEffect(() => {
@@ -129,7 +130,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50">
       <Navbar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         userName={displayName || user.email}
         onSignOut={signOut}
         lastUpdated={lastUpdated}
@@ -175,7 +176,7 @@ export default function Home() {
             selectedMarkets={selectedMarkets}
           />
         )}
-        {activeTab === "gold" && isEgyptSelected && <GoldPrices />}
+        {activeTab === "gold" && <GoldPrices />}
       </main>
 
       <footer className="text-center py-6 text-sm text-gray-400 border-t border-gray-200 mt-8 mb-20 md:mb-0">
