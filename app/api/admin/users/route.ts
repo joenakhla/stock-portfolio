@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function GET(request: NextRequest) {
   // Verify the caller is the admin — check their JWT against profiles.is_admin
@@ -7,10 +7,10 @@ export async function GET(request: NextRequest) {
   const token = authHeader?.replace("Bearer ", "");
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+  const { data: { user }, error: authError } = await getSupabaseAdmin().auth.getUser(token);
   if (authError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: profile } = await supabaseAdmin
+  const { data: profile } = await getSupabaseAdmin()
     .from("profiles")
     .select("is_admin")
     .eq("id", user.id)
@@ -19,11 +19,11 @@ export async function GET(request: NextRequest) {
   if (!profile?.is_admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // Fetch all auth users
-  const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+  const { data: authUsers, error: listError } = await getSupabaseAdmin().auth.admin.listUsers({ perPage: 1000 });
   if (listError) return NextResponse.json({ error: listError.message }, { status: 500 });
 
   // Fetch all profiles
-  const { data: profiles } = await supabaseAdmin
+  const { data: profiles } = await getSupabaseAdmin()
     .from("profiles")
     .select("id, display_name, phone_number, country_code, is_admin, created_at");
 
