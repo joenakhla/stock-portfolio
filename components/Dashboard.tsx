@@ -237,6 +237,7 @@ export default function Dashboard({
                         <PerformanceChart
                           symbols={[stock.symbol]}
                           title={`${stock.symbol} Price History`}
+                          defaultRange="6mo"
                         />
                         <FibonacciLevels symbol={stock.symbol} />
                         <div>
