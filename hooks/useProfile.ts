@@ -57,26 +57,20 @@ export function useProfile(userId: string | undefined) {
   async function createProfile(name: string) {
     if (!userId) return;
 
-    // Pull phone/country from auth metadata if available (set during signup)
     const { data: { user } } = await supabase.auth.getUser();
     const meta = user?.user_metadata ?? {};
 
-    const { error } = await supabase.from("profiles").insert({
+    // Upsert so it works even if a row already exists (e.g. admin pre-created via SQL).
+    // Do NOT include is_admin — preserve whatever value the DB already has.
+    await supabase.from("profiles").upsert({
       id: userId,
       display_name: name,
       phone_number: meta.phone_number ?? null,
       country_code: meta.country_code ?? null,
-      is_admin: false,
-    });
-    if (!error) {
-      setProfile({
-        display_name: name,
-        phone_number: meta.phone_number ?? null,
-        country_code: meta.country_code ?? null,
-        is_admin: false,
-      });
-      setHasProfile(true);
-    }
+    }, { onConflict: "id" });
+
+    // Re-fetch to get the real profile (picks up is_admin set server-side)
+    await fetchProfile();
   }
 
   async function updateProfile(name: string) {
