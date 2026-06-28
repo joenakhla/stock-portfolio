@@ -3,8 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
+interface ProfileData {
+  display_name: string | null;
+  phone_number: string | null;
+  country_code: string | null;
+  is_admin: boolean;
+}
+
 export function useProfile(userId: string | undefined) {
-  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [hasProfile, setHasProfile] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -14,20 +21,27 @@ export function useProfile(userId: string | undefined) {
       return;
     }
 
+    const timeout = setTimeout(() => {
+      setHasProfile(false);
+      setLoading(false);
+    }, 6000);
+
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("display_name")
+        .select("display_name, phone_number, country_code, is_admin")
         .eq("id", userId)
         .single();
 
+      clearTimeout(timeout);
       if (!error && data) {
-        setDisplayName(data.display_name);
+        setProfile(data as ProfileData);
         setHasProfile(true);
       } else {
         setHasProfile(false);
       }
     } catch {
+      clearTimeout(timeout);
       setHasProfile(false);
     }
     setLoading(false);
@@ -39,11 +53,25 @@ export function useProfile(userId: string | undefined) {
 
   async function createProfile(name: string) {
     if (!userId) return;
-    const { error } = await supabase
-      .from("profiles")
-      .insert({ id: userId, display_name: name });
+
+    // Pull phone/country from auth metadata if available (set during signup)
+    const { data: { user } } = await supabase.auth.getUser();
+    const meta = user?.user_metadata ?? {};
+
+    const { error } = await supabase.from("profiles").insert({
+      id: userId,
+      display_name: name,
+      phone_number: meta.phone_number ?? null,
+      country_code: meta.country_code ?? null,
+      is_admin: false,
+    });
     if (!error) {
-      setDisplayName(name);
+      setProfile({
+        display_name: name,
+        phone_number: meta.phone_number ?? null,
+        country_code: meta.country_code ?? null,
+        is_admin: false,
+      });
       setHasProfile(true);
     }
   }
@@ -55,9 +83,16 @@ export function useProfile(userId: string | undefined) {
       .update({ display_name: name })
       .eq("id", userId);
     if (!error) {
-      setDisplayName(name);
+      setProfile((prev) => prev ? { ...prev, display_name: name } : prev);
     }
   }
 
-  return { displayName, hasProfile, loading, createProfile, updateProfile };
+  return {
+    displayName: profile?.display_name ?? null,
+    hasProfile,
+    loading,
+    isAdmin: profile?.is_admin ?? false,
+    createProfile,
+    updateProfile,
+  };
 }

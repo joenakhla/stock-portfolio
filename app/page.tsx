@@ -26,6 +26,7 @@ export default function Home() {
   const {
     displayName,
     hasProfile,
+    isAdmin,
     loading: profileLoading,
     createProfile,
     updateProfile,
@@ -196,6 +197,7 @@ export default function Home() {
         userName={displayName || user.email}
         onRenameUser={handleRenameUser}
         onSignOut={signOut}
+        isAdmin={isAdmin}
         lastUpdated={lastUpdated}
         onRefresh={handleRefresh}
         isRefreshing={quotesLoading}
