@@ -1,106 +1,187 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const YF_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-};
+interface FibonacciLevels {
+  l0: number;
+  l236: number;
+  l382: number;
+  l500: number;
+  l618: number;
+  l786: number;
+  l100: number;
+}
 
-const FIB_LEVELS = [
-  { percent: 0, label: "Swing High (0%)" },
-  { percent: 0.236, label: "23.6%" },
-  { percent: 0.382, label: "38.2%" },
-  { percent: 0.5, label: "50%" },
-  { percent: 0.618, label: "61.8%" },
-  { percent: 0.786, label: "78.6%" },
-  { percent: 1, label: "Swing Low (100%)" },
-];
+interface HistoryPoint {
+  date: string;
+  close: number;
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function calcLevels(low: number, high: number): FibonacciLevels {
+  const range = high - low;
+  return {
+    l0: round2(low),
+    l236: round2(low + range * 0.236),
+    l382: round2(low + range * 0.382),
+    l500: round2(low + range * 0.5),
+    l618: round2(low + range * 0.618),
+    l786: round2(low + range * 0.786),
+    l100: round2(high),
+  };
+}
+
+function calcTrend(
+  currentPrice: number,
+  low: number,
+  high: number
+): "up" | "down" | "sideways" {
+  const midpoint = (low + high) / 2;
+  const range = high - low;
+  const tenPct = range * 0.1;
+  if (Math.abs(currentPrice - midpoint) <= tenPct) return "sideways";
+  return currentPrice > midpoint ? "up" : "down";
+}
+
+async function getGeminiAnalysis(
+  symbol: string,
+  currentPrice: number,
+  high6m: number,
+  low6m: number,
+  levels: FibonacciLevels,
+  trend: string
+): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const prompt = `You are a technical analysis assistant. Analyze the following Fibonacci retracement data for ${symbol} and provide concise trading guidance.
+
+Symbol: ${symbol}
+Current Price: ${currentPrice}
+6-Month High: ${high6m}
+6-Month Low: ${low6m}
+Trend: ${trend}
+
+Fibonacci Levels:
+- 0% (Low / Support): ${levels.l0}
+- 23.6%: ${levels.l236}
+- 38.2% (Key Buy): ${levels.l382}
+- 50%: ${levels.l500}
+- 61.8% (Golden Ratio): ${levels.l618}
+- 78.6%: ${levels.l786}
+- 100% (High / Resistance): ${levels.l100}
+
+Respond in this exact format:
+Buy Zone: [price range]
+Sell Zone: [price range]
+Stop-Loss: [price level]
+Rationale: [exactly 2 sentences explaining the setup based on Fibonacci levels and current trend]`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data?.candidates?.[0]?.content?.parts?.[0]?.text as string) ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: NextRequest) {
-  const symbol = request.nextUrl.searchParams.get("symbol");
+  const { searchParams } = new URL(request.url);
+  const symbol = searchParams.get("symbol");
 
   if (!symbol) {
-    return NextResponse.json({ error: "Symbol is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing required query parameter: symbol" },
+      { status: 400 }
+    );
   }
 
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=6mo`;
-    const res = await fetch(url, { headers: YF_HEADERS, cache: "no-store" });
+    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+      symbol
+    )}?interval=1d&range=6mo`;
 
-    if (!res.ok) {
-      return NextResponse.json({ error: "Could not fetch data" }, { status: 502 });
+    const yahooRes = await fetch(yahooUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+      cache: "no-store",
+    });
+
+    if (!yahooRes.ok) {
+      throw new Error(
+        `Yahoo Finance returned ${yahooRes.status}: ${yahooRes.statusText}`
+      );
     }
 
-    const data = await res.json();
-    const result = data.chart?.result?.[0];
+    const yahooData = await yahooRes.json();
+    const result = yahooData?.chart?.result?.[0];
 
     if (!result) {
-      return NextResponse.json({ error: "No data found" }, { status: 404 });
+      throw new Error("No data returned from Yahoo Finance for symbol: " + symbol);
     }
 
-    const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
-    const validCloses = closes.filter((c): c is number => c !== null && c > 0);
+    const timestamps: number[] = result.timestamp ?? [];
+    const closes: (number | null)[] = result.indicators?.quote?.[0]?.close ?? [];
 
-    if (validCloses.length < 10) {
-      return NextResponse.json({ error: "Insufficient data" }, { status: 404 });
+    const validPairs: { ts: number; close: number }[] = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      if (closes[i] != null && (closes[i] as number) > 0) {
+        validPairs.push({ ts: timestamps[i], close: closes[i] as number });
+      }
     }
 
-    const currentPrice = result.meta?.regularMarketPrice ?? validCloses[validCloses.length - 1];
-    const swingHigh = Math.max(...validCloses);
-    const swingLow = Math.min(...validCloses);
-    const range = swingHigh - swingLow;
-
-    if (range === 0) {
-      return NextResponse.json({ error: "No price movement" }, { status: 404 });
+    if (validPairs.length === 0) {
+      throw new Error("No valid close prices found for symbol: " + symbol);
     }
 
-    const levels = FIB_LEVELS.map((fl) => ({
-      percent: fl.percent,
-      price: Math.round((swingHigh - range * fl.percent) * 100) / 100,
-      label: fl.label,
+    const closePrices = validPairs.map((p) => p.close);
+    const high6m = round2(Math.max(...closePrices));
+    const low6m = round2(Math.min(...closePrices));
+    const currentPrice = round2(closePrices[closePrices.length - 1]);
+
+    const levels = calcLevels(low6m, high6m);
+    const trend = calcTrend(currentPrice, low6m, high6m);
+
+    const history: HistoryPoint[] = validPairs.map((p) => ({
+      date: new Date(p.ts * 1000).toISOString().split("T")[0],
+      close: round2(p.close),
     }));
 
-    // Determine where current price sits relative to Fibonacci levels
-    const pricePosition = (swingHigh - currentPrice) / range;
-
-    // Recent trend: compare current price to 20-day moving average
-    const recent20 = validCloses.slice(-20);
-    const ma20 = recent20.reduce((a, b) => a + b, 0) / recent20.length;
-    const trendingUp = currentPrice > ma20;
-
-    let recommendation: "Buy" | "Sell" | "Hold";
-    let reasoning: string;
-
-    if (pricePosition >= 0.55 && trendingUp) {
-      recommendation = "Buy";
-      reasoning = `Price near ${pricePosition >= 0.7 ? "strong" : ""} Fibonacci support (${(pricePosition * 100).toFixed(0)}% retracement) with upward trend. Potential bounce zone.`;
-    } else if (pricePosition >= 0.55 && !trendingUp) {
-      recommendation = "Hold";
-      reasoning = `Price near Fibonacci support but trend is still downward. Wait for reversal confirmation before buying.`;
-    } else if (pricePosition <= 0.15) {
-      recommendation = "Sell";
-      reasoning = `Price near swing high resistance. Consider taking profits or tightening stops.`;
-    } else if (pricePosition <= 0.3 && !trendingUp) {
-      recommendation = "Sell";
-      reasoning = `Price rejected from upper Fibonacci levels (${(pricePosition * 100).toFixed(0)}% level) and trending down. Potential further decline.`;
-    } else if (pricePosition > 0.35 && pricePosition < 0.55) {
-      recommendation = "Hold";
-      reasoning = `Price in the 38.2%-61.8% consolidation zone. Wait for a breakout above 38.2% (buy) or breakdown below 61.8% (sell).`;
-    } else {
-      recommendation = "Hold";
-      reasoning = `Price between key Fibonacci levels. Monitor for clear direction before acting.`;
-    }
+    const analysis = await getGeminiAnalysis(
+      symbol,
+      currentPrice,
+      high6m,
+      low6m,
+      levels,
+      trend
+    );
 
     return NextResponse.json({
-      symbol: symbol.toUpperCase(),
-      swingHigh,
-      swingLow,
+      symbol,
       currentPrice,
+      high6m,
+      low6m,
+      trend,
       levels,
-      recommendation,
-      reasoning,
+      history,
+      analysis,
     });
-  } catch (error) {
-    console.error("Fibonacci API error:", error);
-    return NextResponse.json({ error: "Failed to calculate Fibonacci levels" }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

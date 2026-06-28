@@ -5,11 +5,13 @@ import { WatchlistStock, StockQuote, SimulationResult } from "@/lib/types";
 import AddStockModal from "./AddStockModal";
 import ConfirmModal from "./ConfirmModal";
 import PerformanceChart from "./DynamicChart";
+import FibonacciPanel from "./FibonacciPanel";
 
 interface WatchlistProps {
   stocks: WatchlistStock[];
   quotes: Record<string, StockQuote>;
   loading: boolean;
+  selectedMarket?: string;
   onAdd: (stock: { symbol: string; name: string }) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
 }
@@ -18,6 +20,7 @@ export default function Watchlist({
   stocks,
   quotes,
   loading,
+  selectedMarket,
   onAdd,
   onRemove,
 }: WatchlistProps) {
@@ -26,6 +29,14 @@ export default function Watchlist({
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedStock, setExpandedStock] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [fibSymbol, setFibSymbol] = useState<string | null>(null);
+
+  // Filter stocks by selected market (EGX = .CA suffix, US = no .CA suffix)
+  const visibleStocks = selectedMarket
+    ? stocks.filter((s) =>
+        selectedMarket === "EGX" ? s.symbol.endsWith(".CA") : !s.symbol.endsWith(".CA")
+      )
+    : stocks;
 
   function getInvestAmount(symbol: string): number {
     const raw = investAmounts[symbol];
@@ -158,17 +169,21 @@ export default function Watchlist({
         </button>
       </div>
 
-      {stocks.length === 0 ? (
+      {visibleStocks.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
           <div className="text-5xl mb-4">👀</div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Your watchlist is empty</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">
+            {stocks.length === 0 ? "Your watchlist is empty" : `No ${selectedMarket === "EGX" ? "Egyptian" : "US"} stocks in your watchlist`}
+          </h3>
           <p className="text-gray-500 mb-4">
-            Add stocks you&apos;re curious about. You&apos;ll see their current price and what your return would have been.
+            {stocks.length === 0
+              ? "Add stocks you're curious about."
+              : `Switch markets or add ${selectedMarket === "EGX" ? "EGX stocks (e.g. COMI.CA)" : "US stocks"} to your watchlist.`}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {stocks.map((stock) => {
+          {visibleStocks.map((stock) => {
             const quote = quotes[stock.symbol] as StockQuote | undefined;
             const isExpanded = expandedStock === stock.symbol;
             const sim = simulations[stock.symbol];
@@ -240,6 +255,14 @@ export default function Watchlist({
                       }`}
                     >
                       {isExpanded ? "Hide" : "What If?"}
+                    </button>
+
+                    <button
+                      onClick={() => setFibSymbol(stock.symbol)}
+                      className="px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-xs md:text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                      title="Fibonacci Analysis"
+                    >
+                      Fib
                     </button>
 
                     <button
@@ -347,6 +370,10 @@ export default function Watchlist({
         onConfirm={() => { onRemove(removingId!); setRemovingId(null); }}
         onCancel={() => setRemovingId(null)}
       />
+
+      {fibSymbol && (
+        <FibonacciPanel symbol={fibSymbol} onClose={() => setFibSymbol(null)} />
+      )}
     </div>
   );
 }

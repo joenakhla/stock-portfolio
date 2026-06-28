@@ -38,6 +38,7 @@ async function fetchWithUA(url: string) {
 }
 
 async function fetchTrendingForRegion(region: string, fallback: string[]): Promise<string[]> {
+  const isEgx = region === "EG";
   try {
     const res = await fetchWithUA(
       `https://query1.finance.yahoo.com/v1/finance/trending/${region}?count=20`
@@ -48,8 +49,10 @@ async function fetchTrendingForRegion(region: string, fallback: string[]): Promi
       const symbols = quotes
         .map((q) => q.symbol)
         .filter((s) => !s.includes("=") && !s.includes("^"))
+        // EGX: must have .CA suffix; US: must not have .CA suffix
+        .filter((s) => isEgx ? s.endsWith(".CA") : !s.endsWith(".CA"))
         .slice(0, 15);
-      if (symbols.length > 0) return symbols;
+      if (symbols.length >= 3) return symbols;
     }
   } catch {
     // Fall through to fallback

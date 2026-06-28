@@ -233,6 +233,7 @@ export default function Home() {
             stocks={watchlistStocks}
             quotes={watchlistQuotes}
             loading={watchlistLoading}
+            selectedMarket={selectedMarket}
             onAdd={handleAddWatchlistStock}
             onRemove={handleRemoveWatchlistStock}
           />
