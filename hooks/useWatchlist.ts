@@ -33,19 +33,26 @@ export function useWatchlist(userId: string | undefined) {
   const stocksRef = useRef<WatchlistStock[]>([]);
 
   const fetchStocks = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
-    // Fetch ALL users' watchlist stocks (shared view)
-    const { data, error } = await supabase
-      .from("watchlist_stocks")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      // Fetch ALL users' watchlist stocks (shared view)
+      const { data, error } = await supabase
+        .from("watchlist_stocks")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      const mapped = (data as DbWatchlistRow[]).map(mapRow);
-      setStocks(mapped);
-      stocksRef.current = mapped;
+      if (!error && data) {
+        const mapped = (data as DbWatchlistRow[]).map(mapRow);
+        setStocks(mapped);
+        stocksRef.current = mapped;
+      }
+    } catch {
+      // DB unavailable — leave stocks empty
     }
     setLoading(false);
   }, [userId]);

@@ -39,20 +39,27 @@ export function usePortfolio(userId: string | undefined) {
   const stocksRef = useRef<PortfolioStock[]>([]);
 
   const fetchStocks = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
-    // Fetch ALL users' stocks (shared dashboard view)
-    // My Stocks tab filters client-side by userId
-    const { data, error } = await supabase
-      .from("portfolio_stocks")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      // Fetch ALL users' stocks (shared dashboard view)
+      // My Stocks tab filters client-side by userId
+      const { data, error } = await supabase
+        .from("portfolio_stocks")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      const mapped = (data as DbPortfolioRow[]).map(mapRow);
-      setStocks(mapped);
-      stocksRef.current = mapped;
+      if (!error && data) {
+        const mapped = (data as DbPortfolioRow[]).map(mapRow);
+        setStocks(mapped);
+        stocksRef.current = mapped;
+      }
+    } catch {
+      // DB unavailable — leave stocks empty
     }
     setLoading(false);
   }, [userId]);
