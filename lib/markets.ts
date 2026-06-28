@@ -64,7 +64,7 @@ export const MARKETS: Record<MarketId, MarketConfig> = {
   },
 };
 
-export const ALL_MARKET_IDS: MarketId[] = ["US", "EGX"];
+export const ALL_MARKET_IDS: MarketId[] = ["EGX", "US"];
 
 export function formatPrice(amount: number, currency: string): string {
   if (currency === "EGP") {

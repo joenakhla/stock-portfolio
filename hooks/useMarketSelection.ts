@@ -3,44 +3,43 @@
 import { useState, useEffect, useCallback } from "react";
 import { MarketId } from "@/lib/markets";
 
-const STORAGE_KEY = "stock-portfolio-markets";
+const STORAGE_KEY = "stock-portfolio-market";
 
 export function useMarketSelection() {
-  const [selectedMarkets, setSelectedMarkets] = useState<MarketId[]>(["US"]);
+  const [selectedMarket, setSelectedMarket] = useState<MarketId>("EGX");
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as MarketId[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setSelectedMarkets(parsed);
-        }
+      const stored = localStorage.getItem(STORAGE_KEY) as MarketId | null;
+      if (stored === "EGX" || stored === "US") {
+        setSelectedMarket(stored);
       }
     } catch {
-      // ignore parse errors
+      // ignore
     }
     setLoaded(true);
   }, []);
 
   useEffect(() => {
     if (loaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedMarkets));
+      localStorage.setItem(STORAGE_KEY, selectedMarket);
     }
-  }, [selectedMarkets, loaded]);
+  }, [selectedMarket, loaded]);
 
-  const toggleMarket = useCallback((marketId: MarketId) => {
-    setSelectedMarkets((prev) => {
-      if (prev.includes(marketId)) {
-        if (prev.length === 1) return prev;
-        return prev.filter((m) => m !== marketId);
-      }
-      return [...prev, marketId];
-    });
+  const selectMarket = useCallback((marketId: MarketId) => {
+    setSelectedMarket(marketId);
   }, []);
 
-  const isEgyptSelected = selectedMarkets.includes("EGX");
+  // toggleMarket kept for backward compat — behaves as select
+  const toggleMarket = useCallback((marketId: MarketId) => {
+    setSelectedMarket(marketId);
+  }, []);
 
-  return { selectedMarkets, toggleMarket, isEgyptSelected, loaded };
+  const isEgyptSelected = selectedMarket === "EGX";
+
+  // selectedMarkets array for components that still accept MarketId[]
+  const selectedMarkets: MarketId[] = [selectedMarket];
+
+  return { selectedMarket, selectedMarkets, selectMarket, toggleMarket, isEgyptSelected, loaded };
 }

@@ -26,8 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // 8-second timeout so a slow/paused Supabase never blocks the page forever
-    const timeout = setTimeout(() => setLoading(false), 8000);
+    // 3-second timeout so a slow/paused Supabase never blocks the page forever
+    const timeout = setTimeout(() => setLoading(false), 3000);
 
     supabase.auth
       .getSession()

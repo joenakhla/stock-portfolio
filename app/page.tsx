@@ -21,7 +21,7 @@ export default function Home() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const { selectedMarkets, toggleMarket, isEgyptSelected } = useMarketSelection();
+  const { selectedMarket, selectedMarkets, selectMarket, toggleMarket, isEgyptSelected } = useMarketSelection();
 
   const {
     displayName,
@@ -60,9 +60,9 @@ export default function Home() {
   );
 
   function handleTabChange(tab: string) {
-    // Auto-enable Egypt market when navigating to Gold tab
-    if (tab === "gold" && !isEgyptSelected) {
-      toggleMarket("EGX");
+    // Auto-switch to EGX when opening Gold tab (gold prices are EGP-based)
+    if (tab === "gold" && selectedMarket !== "EGX") {
+      selectMarket("EGX");
     }
     setActiveTab(tab);
   }
@@ -202,7 +202,9 @@ export default function Home() {
         onRefresh={handleRefresh}
         isRefreshing={quotesLoading}
         selectedMarkets={selectedMarkets}
+        selectedMarket={selectedMarket}
         onToggleMarket={toggleMarket}
+        onSelectMarket={selectMarket}
       />
 
       <main className="max-w-6xl mx-auto px-3 md:px-4 py-4 md:py-6 pb-24 md:pb-6">
