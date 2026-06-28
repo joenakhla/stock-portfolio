@@ -28,6 +28,7 @@ export default function Home() {
     hasProfile,
     loading: profileLoading,
     createProfile,
+    updateProfile,
   } = useProfile(user?.id);
 
   const {
@@ -85,6 +86,15 @@ export default function Home() {
           )
         )
       : portfolioLastUpdated || watchlistLastUpdated;
+
+  async function handleRenameUser(name: string) {
+    try {
+      await updateProfile(name);
+      showToast("Name updated", "success");
+    } catch {
+      showToast("Couldn't update name — please try again", "error");
+    }
+  }
 
   function handleRefresh() {
     refreshPortfolioQuotes();
@@ -184,6 +194,7 @@ export default function Home() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         userName={displayName || user.email}
+        onRenameUser={handleRenameUser}
         onSignOut={signOut}
         lastUpdated={lastUpdated}
         onRefresh={handleRefresh}
