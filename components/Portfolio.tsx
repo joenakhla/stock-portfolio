@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { PortfolioStock, StockQuote } from "@/lib/types";
 import AddStockModal from "./AddStockModal";
 import EditStockModal from "./EditStockModal";
+import ConfirmModal from "./ConfirmModal";
 import PerformanceChart from "./DynamicChart";
 
 interface PortfolioProps {
@@ -37,6 +38,7 @@ export default function Portfolio({
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStock, setEditingStock] = useState<PortfolioStock | null>(null);
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   // Compute lot labels for stocks that appear more than once
   const lotLabels = useMemo(() => {
@@ -73,13 +75,7 @@ export default function Portfolio({
   }
 
   function handleRemove(id: string) {
-    if (
-      !window.confirm(
-        "Are you sure you want to remove this stock from your portfolio?"
-      )
-    )
-      return;
-    onRemove(id);
+    setRemovingId(id);
   }
 
   if (loading) {
@@ -462,6 +458,15 @@ export default function Portfolio({
           onSave={onUpdate}
         />
       )}
+
+      <ConfirmModal
+        isOpen={removingId !== null}
+        title="Remove stock"
+        message="This will permanently remove this entry from your portfolio."
+        confirmLabel="Remove"
+        onConfirm={() => { onRemove(removingId!); setRemovingId(null); }}
+        onCancel={() => setRemovingId(null)}
+      />
     </div>
   );
 }

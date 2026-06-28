@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { WatchlistStock, StockQuote, SimulationResult } from "@/lib/types";
 import AddStockModal from "./AddStockModal";
+import ConfirmModal from "./ConfirmModal";
 import PerformanceChart from "./DynamicChart";
 
 interface WatchlistProps {
@@ -25,6 +26,7 @@ export default function Watchlist({
   >({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [expandedStock, setExpandedStock] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   async function runSimulation(symbol: string) {
     if (simulations[symbol]) {
@@ -236,7 +238,7 @@ export default function Watchlist({
                     </button>
 
                     <button
-                      onClick={() => onRemove(stock.id)}
+                      onClick={() => setRemovingId(stock.id)}
                       className="text-gray-400 hover:text-red-500 transition-colors"
                       title="Remove from watchlist"
                     >
@@ -305,6 +307,15 @@ export default function Watchlist({
         onClose={() => setShowAddModal(false)}
         onAdd={handleAdd}
         mode="watchlist"
+      />
+
+      <ConfirmModal
+        isOpen={removingId !== null}
+        title="Remove from watchlist"
+        message="This will remove this stock from your watchlist."
+        confirmLabel="Remove"
+        onConfirm={() => { onRemove(removingId!); setRemovingId(null); }}
+        onCancel={() => setRemovingId(null)}
       />
     </div>
   );
