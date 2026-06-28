@@ -215,6 +215,7 @@ export default function Home() {
         {activeTab === "portfolio" && (
           <Portfolio
             stocks={myPortfolioStocks}
+            allStocks={portfolioStocks}
             quotes={portfolioQuotes}
             loading={portfolioLoading}
             quotesLoading={quotesLoading}
