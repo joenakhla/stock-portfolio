@@ -246,7 +246,7 @@ export default function Navbar({
               <svg className="w-7 h-7 md:w-8 md:h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              <h1 className="text-lg md:text-xl font-bold text-gray-900 hidden sm:block">StockTracker</h1>
+              <h1 className="text-lg md:text-xl font-bold text-gray-900 hidden sm:block">BorsaFibo</h1>
             </div>
 
             {/* Desktop Tabs */}
