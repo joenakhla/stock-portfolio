@@ -7,6 +7,7 @@ import StockNews from "./StockNews";
 interface TrendingStock {
   symbol: string;
   name: string;
+  currency?: string;
   currentPrice: number;
   dayChange: number;
   weekChange: number;
@@ -212,7 +213,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"], w
                   {/* Price + Day Change */}
                   <div className="text-right">
                     <p className="font-bold text-gray-900 text-base md:text-lg">
-                      ${stock.currentPrice.toFixed(2)}
+                      {stock.currency === "EGP" ? "" : "$"}{stock.currentPrice.toFixed(2)}{stock.currency === "EGP" ? " EGP" : ""}
                     </p>
                     <p
                       className={`text-xs md:text-sm font-medium ${
@@ -309,7 +310,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"], w
               {/* 52-Week Range */}
               <div className="px-5 pb-4">
                 <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span>${stock.low52Week.toFixed(2)}</span>
+                  <span>{stock.currency === "EGP" ? "" : "$"}{stock.low52Week.toFixed(2)}{stock.currency === "EGP" ? " EGP" : ""}</span>
                   <div className="flex-1 relative h-2 bg-gray-200 rounded-full">
                     <div
                       className="absolute h-2 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full"
@@ -342,7 +343,7 @@ export default function Trending({ onAddToWatchlist, selectedMarkets = ["US"], w
                       }}
                     />
                   </div>
-                  <span>${stock.high52Week.toFixed(2)}</span>
+                  <span>{stock.currency === "EGP" ? "" : "$"}{stock.high52Week.toFixed(2)}{stock.currency === "EGP" ? " EGP" : ""}</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1 text-center">
                   52-Week Range

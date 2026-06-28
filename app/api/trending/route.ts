@@ -27,6 +27,40 @@ const EGX_FALLBACK = [
   "EKHO.CA", "EFIH.CA", "ORWE.CA", "MNHD.CA", "FWRY.CA",
 ];
 
+const EGX_NAMES: Record<string, string> = {
+  "COMI.CA": "Commercial International Bank",
+  "HRHO.CA": "El Sewedy Electric",
+  "EAST.CA": "Eastern Company",
+  "SWDY.CA": "Elsewedy Electric",
+  "TMGH.CA": "Talaat Moustafa Group",
+  "EKHO.CA": "Egyptian Kuwaiti Holding",
+  "EFIH.CA": "EFG-Hermes Holding",
+  "ORWE.CA": "Oriental Weavers",
+  "MNHD.CA": "Medinet Nasr Housing",
+  "FWRY.CA": "Fawry for Banking Technology",
+  "ABUK.CA": "Abu Kir Fertilizers",
+  "AMOC.CA": "Alexandria Mineral Oils",
+  "CIEB.CA": "CIB Egypt",
+  "CLHO.CA": "Cairo Housing & Development",
+  "DCRC.CA": "Dice Sports & Entertainment",
+  "DGTS.CA": "Delta Insurance",
+  "HELI.CA": "Heliopolis Housing",
+  "ISPH.CA": "Ibnsina Pharma",
+  "JUFO.CA": "Juhayna Food Industries",
+  "MFPC.CA": "Misr Fertilizers Production",
+  "MTIE.CA": "Modern Furniture",
+  "OCDI.CA": "Orascom Construction",
+  "OFAS.CA": "Orascom Financial",
+  "OTMT.CA": "Orascom Telecom Media",
+  "PHDC.CA": "Palm Hills Developments",
+  "POUL.CA": "Cairo Poultry",
+  "RAYA.CA": "Raya Holding",
+  "SKPC.CA": "Sidi Kerir Petrochemicals",
+  "SUGR.CA": "Delta Sugar Company",
+  "SWVL.CA": "Swvl Holdings",
+  "TALM.CA": "Taaleem Holdings",
+};
+
 async function fetchWithUA(url: string) {
   return fetch(url, {
     headers: {
@@ -162,9 +196,19 @@ export async function GET(request: NextRequest) {
         if (volumeSpike > 50) reasons.push(`${Math.round(volumeSpike)}% volume spike`);
         if (reasons.length === 0) reasons.push("Trending on Yahoo Finance");
 
+        const isEgxSymbol = sym.endsWith(".CA");
+        const resolvedName =
+          EGX_NAMES[sym] ||
+          (meta.shortName && meta.shortName !== sym && meta.shortName !== sym.replace(".CA", "")
+            ? meta.shortName
+            : null) ||
+          meta.longName ||
+          sym;
+
         results.push({
           symbol: sym,
-          name: meta.shortName || meta.longName || sym,
+          name: resolvedName,
+          currency: isEgxSymbol ? "EGP" : "USD",
           currentPrice,
           dayChange,
           weekChange,
