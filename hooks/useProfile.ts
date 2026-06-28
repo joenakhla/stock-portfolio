@@ -21,10 +21,13 @@ export function useProfile(userId: string | undefined) {
       return;
     }
 
+    // Always reset loading to true when we start a real fetch
+    setLoading(true);
+
     const timeout = setTimeout(() => {
       setHasProfile(false);
       setLoading(false);
-    }, 6000);
+    }, 5000);
 
     try {
       const { data, error } = await supabase
